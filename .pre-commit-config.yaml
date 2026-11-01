@@ -3,6 +3,7 @@
 # Instalar en el repo: pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push
 # Actualizar versiones: pre-commit autoupdate (revisa el diff antes de aceptarlo)
 default_install_hook_types: [pre-commit, commit-msg, pre-push]
+default_stages: [pre-commit]  # cada hook corre una vez; los de mensaje o push declaran su propia etapa
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
