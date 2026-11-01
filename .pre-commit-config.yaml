@@ -1,0 +1,56 @@
+# Generado por /precommit-setup (kit estilo Kiro). Equivale a los hooks de Kiro sobre el stage:
+# al hacer commit revisa secretos, formato y specs; las pruebas en pre-push se añaden cuando existan (ver abajo).
+# Instalar en el repo: pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push
+# Actualizar versiones: pre-commit autoupdate (revisa el diff antes de aceptarlo)
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(docs/architecture/svg/|docs/architecture/.*\.drawio$|\.kiro/tools/)  # generados por kspec
+      - id: end-of-file-fixer
+        exclude: ^(docs/architecture/svg/|docs/architecture/.*\.drawio$|\.kiro/tools/)  # generados por kspec
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      - id: detect-private-key
+      - id: no-commit-to-branch  # U-1: main solo recibe cambios por Pull Request
+        args: [--branch, main]
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [feat, fix, refactor, test, docs, chore, ci, perf]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.1
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+        exclude: ^\.kiro/tools/  # copia de la librería del kit: la regenera kspec, no se edita
+      - id: ruff-format
+        exclude: ^(\.kiro/tools/|docs/architecture/diagrams\.py$)  # el modelo de diagramas mantiene sus tablas compactas
+  # Terraform, Docker y frontend: se añaden cuando existan infra/terraform, los Dockerfile y frontend/.
+
+  - repo: local
+    hooks:
+      - id: kiro-spec-lint
+        name: kiro spec lint (trazabilidad de las specs en stage)
+        entry: bash -c 'command -v kspec >/dev/null || { echo "kspec no instalado, se omite"; exit 0; }; kspec lint --staged'
+        language: system
+        pass_filenames: false
+        files: ^\.kiro/specs/
+      # Hook de pruebas (pre-push): pendiente hasta que tech.md tenga el comando real. La primera spec que cree
+      # backend/ o collector/ lo añade aquí (local, stages: [pre-push], pass_filenames: false).
