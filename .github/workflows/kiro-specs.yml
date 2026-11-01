@@ -1,0 +1,72 @@
+# Generado por `kspec ci-init` (kit estilo Kiro): valida requisitos, diseño, tareas y trazabilidad
+# de todas las specs en cada cambio, que los diagramas de docs/architecture estén al día y que la matriz
+# de trazabilidad (docs/traceability.md) coincida con las specs y las etiquetas de las pruebas.
+# Los validadores son autónomos (.kiro/ci y .kiro/tools): no necesitan el kit ni draw.io en CI.
+name: kiro-specs
+
+# Se ejecuta en cada cambio: una migración, IaC o un workflow nuevo exigen su vista de arquitectura.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  spec-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Validar specs
+        run: |
+          status=0
+          for spec in .kiro/specs/*/; do
+            [ -d "$spec" ] || continue  # sin specs, el patrón no coincide con nada
+            case "$(basename "$spec")" in _*|.*) continue ;; esac
+            python3 .kiro/ci/kiro_spec_lint.py "$spec" || status=1
+          done
+          exit $status
+
+  architecture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Documentación arquitectónica completa (vistas, cobertura, SVG y ADR)
+        run: python3 .kiro/tools/kiro_diagrams.py check docs/architecture
+
+  traceability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0  # historial completo: la vista de commits lee los trailers Refs
+      - name: Matriz de trazabilidad al día, sin pruebas huérfanas y specs cerradas verificadas
+        run: python3 .kiro/tools/kiro_trace.py check .
+      - name: Commits por criterio (resumen de la ejecución)
+        if: always()
+        run: python3 .kiro/tools/kiro_trace.py commits . >> "$GITHUB_STEP_SUMMARY"
+
+  pr-title:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Título del PR en Conventional Commits (es el mensaje del squash en main)
+        env:
+          TITLE: ${{ github.event.pull_request.title }}  # por variable: nunca interpolado en el script
+        run: |
+          python3 - <<'PY'
+          import os, re, sys
+          title = os.environ["TITLE"]
+          ok = re.match(r"^(feat|fix|refactor|test|docs|chore|ci|perf)(\([a-z0-9-]+\))?!?: \S", title)
+          print(("OK: " if ok else "ERROR (usa tipo(scope): descripción): ") + title)
+          sys.exit(0 if ok else 1)
+          PY

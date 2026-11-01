@@ -9,9 +9,9 @@ repos:
     rev: v6.0.0
     hooks:
       - id: trailing-whitespace
-        exclude: ^(docs/architecture/svg/|docs/architecture/.*\.drawio$|\.kiro/tools/)  # generados por kspec
+        exclude: ^(docs/architecture/svg/|docs/architecture/.*\.drawio$|\.kiro/(tools|ci)/)  # generados por kspec
       - id: end-of-file-fixer
-        exclude: ^(docs/architecture/svg/|docs/architecture/.*\.drawio$|\.kiro/tools/)  # generados por kspec
+        exclude: ^(docs/architecture/svg/|docs/architecture/.*\.drawio$|\.kiro/(tools|ci)/)  # generados por kspec
       - id: check-yaml
         args: [--allow-multiple-documents]
       - id: check-json
@@ -40,9 +40,9 @@ repos:
     hooks:
       - id: ruff-check
         args: [--fix]
-        exclude: ^\.kiro/tools/  # copia de la librería del kit: la regenera kspec, no se edita
+        exclude: ^\.kiro/(tools|ci)/  # copia de la librería del kit: la regenera kspec, no se edita
       - id: ruff-format
-        exclude: ^(\.kiro/tools/|docs/architecture/diagrams\.py$)  # el modelo de diagramas mantiene sus tablas compactas
+        exclude: ^(\.kiro/(tools|ci)/|docs/architecture/diagrams\.py$)  # el modelo de diagramas mantiene sus tablas compactas
   # Terraform, Docker y frontend: se añaden cuando existan infra/terraform, los Dockerfile y frontend/.
 
   - repo: local
