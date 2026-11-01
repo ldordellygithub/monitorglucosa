@@ -1,0 +1,14 @@
+# Dependabot de monitorglucosa (decisión A-8 de .kiro/steering/git.md): un PR semanal agrupado por ecosistema.
+# Hoy solo existen los workflows. Cada spec que cree un componente añade aquí su bloque, por ejemplo:
+#   uv en /backend y /collector, npm en /frontend, docker en /backend y /frontend, terraform en /infra/terraform.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci

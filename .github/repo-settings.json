@@ -1,0 +1,23 @@
+{
+  "repository": {
+    "allow_squash_merge": false,
+    "allow_merge_commit": false,
+    "allow_rebase_merge": true,
+    "allow_auto_merge": false,
+    "allow_update_branch": true,
+    "delete_branch_on_merge": true
+  },
+  "security": {
+    "vulnerability_alerts": true,
+    "automated_security_fixes": true,
+    "secret_scanning": true,
+    "secret_scanning_push_protection": true
+  },
+  "environments": {
+    "prod": {
+      "branches": [
+        "main"
+      ]
+    }
+  }
+}
