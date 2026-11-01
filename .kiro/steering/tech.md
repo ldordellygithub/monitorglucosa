@@ -207,7 +207,7 @@ Detalle por dato en la [vista de ciclo de vida](../../docs/architecture/svg/09-c
 - **Auditoría:** historial de eventos de CloudTrail (90 días, sin coste) para las acciones de administración de la cuenta; sin trail propio en el MVP *(Decidido)*.
 - **Modelo de amenazas:** análisis STRIDE sobre los límites de confianza en la [vista de flujo de datos](../../docs/architecture/svg/08-flujo-de-datos.svg).
 - **Derechos del titular:** exportación (CSV, fase 3) y borrado de sus datos con confirmación explícita *(Decidido)*. Revisar las obligaciones de la Ley 1581 antes de cualquier uso fuera del personal (`P-2`).
-- **CI:** OIDC hacia AWS, sin claves de larga duración. La política de confianza del rol de despliegue solo acepta tokens de este repositorio y del entorno `prod` de GitHub, protegido para `main`: `sub` = `repo:<propietario>/monitorglucosa:environment:prod` y `aud` = `sts.amazonaws.com` *(Decidido)*.
+- **CI:** OIDC hacia AWS, sin claves de larga duración. La política de confianza del rol de despliegue solo acepta tokens de este repositorio y del entorno `prod` de GitHub, protegido para `main`: `sub` = `repo:ldordellygithub/monitorglucosa:environment:prod` y `aud` = `sts.amazonaws.com` *(Decidido)*.
 - Los datos del GD50 se tratan como dato, no como instrucción, si alimentan un LLM (`P-3`).
 
 ## Observabilidad

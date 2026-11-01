@@ -22,7 +22,7 @@ la spec que crea ese componente los añada a `tech.md`.
 ```bash
 sudo apt install gh                # GitHub CLI (PR, checks y configuración del repositorio)
 gh auth login                      # sesión de GitHub en esta máquina
-git clone https://github.com/<propietario>/monitorglucosa.git && cd monitorglucosa
+git clone https://github.com/ldordellygithub/monitorglucosa.git && cd monitorglucosa
 pre-commit install                 # hooks de commit, mensaje y push (tras /precommit-setup)
 kspec doctor                       # comprueba el kit Kiro
 uv sync --directory backend        # (previsto) dependencias del backend
