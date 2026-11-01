@@ -1,0 +1,114 @@
+---
+inclusion: auto
+description: Estrategia Git y GitHub del proyecto (ramas, commits, Pull Requests, revisiones, releases, controles y configuración de GitHub). Léelo antes de crear una rama, un commit o un PR, o de tocar .github/.
+---
+
+# Estrategia Git y GitHub — monitorglucosa
+
+> Estados: **Decidido**, **Propuesto** y **Abierto** (`G-n` en [Decisiones abiertas](#decisiones-abiertas)).
+> Comandos: `docs/guia-de-desarrollo.md`. Datos de GitHub verificados en su documentación el 2026-11-01.
+
+## Perfil del proyecto
+
+| Dimensión | Valor | Fuente |
+| --- | --- | --- |
+| Equipo | Una persona (Luis) más agentes de IA; sin colaboradores | product.md |
+| Repositorio | Monorepo: `backend/`, `collector/`, `frontend/`, `mobile/`, `infra/terraform/`, `dev/`, `scripts/` | structure.md |
+| Riesgo | Datos de salud y producción en AWS; el repositorio nunca contiene datos reales | product.md, tech.md |
+| Despliegue | Actions → ECR → Terraform → Lambda; sin staging; OIDC con `environment:prod` | tech.md |
+| GitHub | Repositorio **público**, plan Free; aún sin remoto (`G-1`) | Decidido aquí |
+
+## Reglas universales
+
+| ID | Regla | Control |
+| --- | --- | --- |
+| U-1 | `main` siempre desplegable; nada directo a `main` | Ruleset (PR, sin borrado ni force-push) y hook `no-commit-to-branch` |
+| U-2 | Todo cambio entra por PR con CI en verde | Ruleset `required_status_checks` |
+| U-3 | Conventional Commits con los scopes de structure.md | Hook `commit-msg` y job `pr-title` |
+| U-4 | Sin secretos, `.env` ni lecturas reales del GD50 | gitleaks (pre-commit y CI) y push protection |
+| U-5 | El historial de `main` no se reescribe | Ruleset `non_fast_forward` |
+| U-6 | Acciones fijadas por SHA y `contents: read` | Revisión del workflow |
+| U-7 | CI hacia AWS solo con OIDC | Terraform (tech.md) |
+| U-8 | Cada PR enlaza spec, tareas y matriz | `/spec-pr` y job `traceability` |
+
+## Prácticas adoptadas
+
+| ID | Práctica | Decisión | Motivo | Estado |
+| --- | --- | --- | --- | --- |
+| A-1 | Modelo de ramas | GitHub Flow | Una persona, un entorno, despliegue por digest | **Decidido** |
+| A-2 | Unidad de PR | Una spec; una ola de `Execution Order` si supera ~400 líneas de código sin pruebas | PR revisables en una sesión | **Decidido** |
+| A-3 | Merge | Rebase, historial lineal | Cada tarea llega a `main` con su `Refs:` | **Decidido** |
+| A-4 | Revisiones | 0 aprobaciones; checks, conversaciones resueltas y agentes revisores | GitHub no deja aprobar el propio PR | **Decidido** |
+| A-5 | Firma | No se firma | El rebase de GitHub deja los commits sin firma verificada | **Decidido** (`G-3`) |
+| A-6 | Versiones | Tag SemVer al cerrar fase: `v0.1.0` fase 1, `v0.2.0` fase 2, `v1.0.0` MVP | Marca el «hecho» de cada fase | **Decidido** |
+| A-7 | Visibilidad | Público, Free | Rulesets, entornos y escaneo gratis; minutos de Actions gratis | **Decidido** |
+| A-8 | Dependencias | Dependabot semanal, un PR agrupado por ecosistema | Menos ruido | **Decidido** |
+| A-9 | Seguridad | Secret scanning con push protection, Dependabot, dependency review; semgrep y gitleaks en CI | Lo nativo bloquea el secreto antes del push; CI lo de tech.md | **Decidido** |
+| A-10 | Entorno `prod` | Solo desde `main`, con tu aprobación manual | Confirmación explícita antes de tocar producción | **Decidido** (`G-2`) |
+| A-11 | CI del monorepo | Un workflow; jobs por componente filtrados por ruta y un job `ci` resumen | Un check obligatorio estable aunque se filtre | **Decidido** |
+
+Por ser público: nada que identifique al titular ni a su cuenta de AWS más allá de lo que exige la IaC, y las
+pruebas solo con datos sintéticos (ya en la definición de hecho).
+
+## Ramas
+
+- `main` es la única rama permanente. Ramas de trabajo desde `main`: `feature/<spec>`, `fix/<spec>` (bugfix) y
+  `hotfix/<tema>` (urgencia en producción, también por PR).
+- Se actualizan con `git pull --rebase origin main` y se borran al fusionar (automático en GitHub).
+
+## Commits
+
+- `<tipo>(<scope>): <descripción en imperativo>`. Tipos: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`,
+  `ci`, `perf`. Scopes: `backend`, `collector`, `frontend`, `mobile`, `infra`, `ci`, `docs`, `steering`.
+- Un commit por tarea de `tasks.md`, que deja las pruebas en verde, con el trailer `Refs: <spec>#<tarea>`.
+- Con rebase cada commit llega a `main`: el mensaje importa tanto como el código.
+
+## Pull Requests
+
+- Título en Conventional Commits; descripción con `.github/pull_request_template.md`, generada por `/spec-pr`.
+- Checks obligatorios: `spec-lint`, `architecture`, `traceability` y `pr-title`. `/ci-setup` añade el job `ci`
+  (pruebas, lint, tipos, semgrep, gitleaks, dependency review e imagen Docker) cuando exista el primer componente,
+  y entonces se añade al ruleset.
+- Lo fusiona Luis con «Rebase and merge» (`gh pr merge --rebase --delete-branch`) con todo en verde.
+
+## Integración con el flujo Kiro
+
+| Paso | Git y GitHub |
+| --- | --- |
+| `/spec-new` | Exige la fundación (`kspec foundation`) |
+| `/spec-next`, `/spec-run` | Rama de la spec; un commit por tarea con `Refs:`, siempre con confirmación |
+| `/spec-converge` | Convergencia completa antes del PR |
+| `/spec-pr` | Push y PR con la spec, la matriz y `kspec trace --commits`, con confirmación |
+| Merge | Rebase; despliegue a `prod` tras la aprobación manual |
+| Cierre de fase | Tag SemVer anotado con la nota de la versión (A-6) |
+
+## Controles de calidad y seguridad
+
+| Momento | Control | Bloquea |
+| --- | --- | --- |
+| Commit | pre-commit: gitleaks, formato, ruff, rama protegida, lint de specs | Sí |
+| Mensaje | Conventional Commits (`commit-msg`) | Sí |
+| Push | Pruebas (`pre-push`) y push protection de GitHub | Sí |
+| Pull Request | Checks obligatorios y conversaciones resueltas | Sí |
+| Despliegue | Entorno `prod`: solo `main` y tu aprobación | Sí |
+| Semanal | PR de Dependabot y alertas de seguridad | No |
+
+## Configuración de GitHub
+
+En `.github/repo-settings.json` (solo rebase, borrar ramas, seguridad, entorno `prod`) y
+`.github/rulesets/main.json`. `kspec github plan` compara y `kspec github apply --yes` aplica, solo con
+confirmación. El revisor del entorno aún no lo gestiona el kit (`G-2`).
+
+## Releases y versionado
+
+Al cerrar una fase (criterio de «hecho» de product.md): tag anotado `vX.Y.0` sobre `main` y release en GitHub
+con la nota (specs, ADR y verificación). Correcciones posteriores: `vX.Y.Z`.
+
+## Decisiones abiertas
+
+| ID | Pregunta | Estado | Resolución o pendiente | Bloquea |
+| --- | --- | --- | --- | --- |
+| G-1 | ¿Usuario de GitHub propietario del repositorio? | **Abierto** | Sustituir `<propietario>` en tech.md y crear el repo público con `gh repo create` | Crear el repo y aplicar la configuración |
+| G-2 | ¿Cómo se declara el revisor del entorno `prod`? | **Abierto** | `kspec github apply` no gestiona revisores: ampliarlo en el kit (recomendado) o configurarlo una vez en GitHub y anotarlo | Primer despliegue (fase 1) |
+| G-3 | ¿Firmar commits si entra un colaborador? | **Abierto** | Revisar entonces junto con A-3 y A-4 | Ninguno hoy |
+| G-4 | ¿Validar en CI los mensajes de cada commit? | *Propuesto* | Con rebase, el hook local es el único control y `--no-verify` lo salta: job `commits` en `/ci-setup` | Ninguno hoy |

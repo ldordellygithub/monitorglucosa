@@ -14,7 +14,7 @@ alwaysApply: true
 ```text
 monitorglucosa/
 ├── .python-version       # 3.13; uv la aplica a backend/ y collector/
-├── .github/workflows/    # CI: lint, tipos, pruebas, semgrep, Docker, despliegue y prueba de humo
+├── .github/              # workflows de CI y despliegue, plantilla de PR, rulesets y ajustes (git.md)
 ├── backend/              # API FastAPI con Clean Architecture
 │   ├── pyproject.toml · uv.lock
 │   ├── Dockerfile        # imagen única: local, CI y Lambda (ADR 0005)
@@ -46,6 +46,7 @@ monitorglucosa/
 ├── compose.yaml          # entorno local: API, PostgreSQL 16, web (nginx) y emisor JWT de pruebas
 ├── infra/terraform/      # módulos y un único estado remoto (prod): local y test no tienen recursos en AWS
 ├── docs/
+│   ├── guia-de-desarrollo.md  # reglas y comandos del repositorio
 │   ├── adr/              # NNNN-titulo-en-kebab-case.md, título en inglés
 │   └── architecture/     # diagramas como código: modelo diagrams.py → .drawio, README y svg/ (kspec diagrams)
 └── .kiro/                # steering, specs, hooks y tools/kiro_diagrams.py (librería de diagramas, la gestiona kspec)
@@ -99,10 +100,20 @@ Clean Architecture: las reglas de dependencias se pueden verificar, a cambio de 
 | Migraciones de Alembic | `AAAAMMDD_<slug>.py`, siempre con `downgrade()` | `20261115_create_glucose_readings.py` |
 | Endpoints | Recursos en plural, minúsculas | `GET /api/v1/readings` |
 | Variables de entorno | `UPPER_SNAKE_CASE` | `DATABASE_URL` |
-| Ramas | `feature/`, `fix/`, `hotfix/`; `main` es la rama desplegable | `feature/ble-sync` |
-| Commits | Conventional Commits **(Decidido: el historial inicial ya los usa)**. Scopes: `backend`, `collector`, `frontend`, `mobile`, `infra`, `ci`, `docs`, `steering` | `feat(collector): read stored readings` |
+| Ramas | `feature/<spec>`, `fix/<spec>`, `hotfix/<tema>`; `main` es la rama desplegable ([git.md](git.md)) | `feature/fase-1b-sincronizacion-ble` |
+| Commits | Conventional Commits **(Decidido)**, uno por tarea con `Refs: <spec>#<tarea>`. Scopes: `backend`, `collector`, `frontend`, `mobile`, `infra`, `ci`, `docs`, `steering` | `feat(collector): read stored readings` |
+| Pull Requests | Título en Conventional Commits; una spec (una ola si es grande); merge por rebase | `feat(collector): sincronizar lecturas del GD50` |
 | Carpetas de spec | `fase-<N><letra>-<tema-en-kebab-case>`, en español | `.kiro/specs/fase-1a-infraestructura-y-auth/` |
 | ADRs | `NNNN-titulo-en-kebab-case.md`, título en inglés; contenido en español | `docs/adr/0001-ble-collector-location.md` |
+
+## Reglas Git (resumen)
+
+Detalle, motivos y comandos en [git.md](git.md) y `docs/guia-de-desarrollo.md`.
+
+- `main` siempre desplegable: nada directo; todo por PR con CI en verde y merge por rebase.
+- Una rama por spec y un commit por tarea con `Refs: <spec>#<tarea>`, siempre con tu confirmación.
+- Repositorio público: nunca secretos, `.env` ni lecturas reales del GD50.
+- Cada despliegue a `prod` espera tu aprobación en GitHub.
 
 ## Convenciones de API
 
@@ -132,6 +143,7 @@ Clean Architecture: las reglas de dependencias se pueden verificar, a cambio de 
 | API Gateway HTTP API y Lambda en VPC sin NAT; configuración por variables de entorno | `T-10`, `T-11` · [ADR 0004](../../docs/adr/0004-api-network-without-nat.md) |
 | Docker Compose en local y CI; imagen de la API en ECR | [ADR 0005](../../docs/adr/0005-containerized-local-environment.md) |
 | Fase 5 solo informativa, sin diagnóstico, tratamiento ni dosis | `P-5` · [product.md](product.md#decisiones-abiertas) |
+| Estrategia Git y GitHub: GitHub Flow, rebase, repo público, `prod` con aprobación manual | [git.md](git.md) |
 | Clean Architecture, composition root en `main.py`, idempotencia por `UNIQUE` | Este documento: [Regla de dependencias](#regla-de-dependencias) y [Convenciones de API](#convenciones-de-api) |
 
 Toda decisión nueva o que cambie una de estas se registra como ADR en `docs/adr/` y se añade a este índice. Los cambios de componentes o de flujos actualizan también el diagrama en `docs/architecture/`.
