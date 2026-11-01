@@ -1,0 +1,9 @@
+# Equivalente a .kiroignore: archivos que el agente no debe leer ni indexar
+.env
+.env.*
+*.pem
+*.key
+secrets/
+.aws/
+*.tfstate
+*.tfstate.backup

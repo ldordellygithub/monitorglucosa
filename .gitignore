@@ -3,3 +3,5 @@ __pycache__/
 .env
 .kiro/.active-spec
 .kiro/.active-task
+.kiro/steering/*.pdf
+.anchor/
