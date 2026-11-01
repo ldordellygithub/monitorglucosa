@@ -17,7 +17,7 @@ alwaysApply: false
 | Repositorio | Monorepo: `backend/`, `collector/`, `frontend/`, `mobile/`, `infra/terraform/`, `dev/`, `scripts/` | structure.md |
 | Riesgo | Datos de salud y producción en AWS; el repositorio nunca contiene datos reales | product.md, tech.md |
 | Despliegue | Actions → ECR → Terraform → Lambda; sin staging; OIDC con `environment:prod` | tech.md |
-| GitHub | Repositorio **público**, plan Free; aún sin remoto (`G-1`) | Decidido aquí |
+| GitHub | `ldordellygithub/monitorglucosa`, **público**, plan Free; commits con el correo privado de GitHub | Decidido aquí |
 
 ## Reglas universales
 
@@ -109,7 +109,7 @@ con la nota (specs, ADR y verificación). Correcciones posteriores: `vX.Y.Z`.
 
 | ID | Pregunta | Estado | Resolución o pendiente | Bloquea |
 | --- | --- | --- | --- | --- |
-| G-1 | ¿Usuario de GitHub propietario del repositorio? | **Abierto** | Sustituir `<propietario>` en tech.md y crear el repo público con `gh repo create` | Crear el repo y aplicar la configuración |
+| G-1 | ¿Usuario de GitHub propietario del repositorio? | **Decidido** | `ldordellygithub`; commits con `112001988+ldordellygithub@users.noreply.github.com` (el correo personal no se publica) | Ninguno |
 | G-2 | ¿Cómo se declara el revisor del entorno `prod`? | **Abierto** | `kspec github apply` no gestiona revisores: ampliarlo en el kit (recomendado) o configurarlo una vez en GitHub y anotarlo | Primer despliegue (fase 1) |
 | G-3 | ¿Firmar commits si entra un colaborador? | **Abierto** | Revisar entonces junto con A-3 y A-4 | Ninguno hoy |
 | G-4 | ¿Validar en CI los mensajes de cada commit? | *Propuesto* | Con rebase, el hook local es el único control y `--no-verify` lo salta: job `commits` en `/ci-setup` | Ninguno hoy |
