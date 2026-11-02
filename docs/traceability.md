@@ -8,22 +8,22 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 
 | Fase | Spec | Estado | Criterios | Con prueba | Manuales | Sin verificar | Cobertura |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | [fase-1a-infraestructura-y-auth](#fase-1a-infraestructura-y-auth) | en curso | 45 | 1 | 0 | 44 | 2 % |
+| 1 | [fase-1a-infraestructura-y-auth](#fase-1a-infraestructura-y-auth) | en curso | 45 | 3 | 0 | 42 | 6 % |
 
 | Fase | Specs | Criterios verificados |
 | --- | --- | --- |
-| 1 | 1 | 1/45 (2 %) |
+| 1 | 1 | 3/45 (6 %) |
 
 ## fase-1a-infraestructura-y-auth
 
-[Requisitos](../.kiro/specs/fase-1a-infraestructura-y-auth/requirements.md) · [Diseño](../.kiro/specs/fase-1a-infraestructura-y-auth/design.md) · [Tareas](../.kiro/specs/fase-1a-infraestructura-y-auth/tasks.md) · 1/45 criterios verificados (2 %) · en curso · tareas 5/33
+[Requisitos](../.kiro/specs/fase-1a-infraestructura-y-auth/requirements.md) · [Diseño](../.kiro/specs/fase-1a-infraestructura-y-auth/design.md) · [Tareas](../.kiro/specs/fase-1a-infraestructura-y-auth/tasks.md) · 3/45 criterios verificados (6 %) · en curso · tareas 7/33
 
 | Requisito | Criterio | Componentes | Decisiones | Tareas | Pruebas | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
 | **1** · Entorno local reproducible | 1.1 | `compose.yaml`, `backend/Dockerfile`, `backend/.dockerignore`, `dev/jwt-issuer`, `dev/postgres/init` | D10, D15, ADR 0005 | 12 ○ | — | ❌ |
 | 1 | 1.2 | `compose.yaml`, `backend/Dockerfile`, `backend/.dockerignore`, `dev/jwt-issuer`, `dev/postgres/init` | D10, D15, ADR 0005 | 12 ○ | — | ❌ |
 | 1 | 1.3 | `compose.yaml`, `backend/Dockerfile`, `backend/.dockerignore`, `dev/jwt-issuer`, `dev/postgres/init` | D10, D15, ADR 0005 | 12 ○ | — | ❌ |
-| 1 | 1.4 | `config.Settings` | D9 | 6 ○, 6.1 ○ | — | ❌ |
+| 1 | 1.4 | `config.Settings` | D9 | 6 ✓, 6.1 ✓ | `backend/tests/unit/test_config.py::test_settings_en_local_sin_ninguna_variable_local_las_nombra_todas`<br>`backend/tests/unit/test_config.py::test_settings_ignora_variables_ajenas_del_entorno`<br>`backend/tests/unit/test_config.py::test_settings_lista_de_clientes_ignora_espacios_y_elementos_vacios`<br>`backend/tests/unit/test_config.py::test_settings_local_y_test_con_todas_las_variables_carga_valores_tipados`<br>`backend/tests/unit/test_config.py::test_settings_nombres_en_minusculas_no_cuentan_como_variables`<br>`backend/tests/unit/test_config.py::test_settings_prod_valida_carga_sin_variables_locales`<br>`backend/tests/unit/test_config.py::test_settings_sin_variable_local_fuera_de_prod_falla_nombrandola`<br>`backend/tests/unit/test_config.py::test_settings_sin_variable_obligatoria_falla_nombrandola`<br>`backend/tests/unit/test_config.py::test_settings_timeout_de_conexion_acepta_los_limites`<br>`backend/tests/unit/test_config.py::test_settings_valor_invalido_falla_nombrando_la_variable_sin_mostrar_el_valor`<br>`backend/tests/unit/test_config_properties.py::test_settings_prod_con_cualquier_variable_local_falla_sin_revelar_valores` | ✅ |
 | **2** · API base, salud y errores | 2.1 | `api.routers.health`, `CheckReadiness`, `SqlDatabaseProbe` | D7 | 9 ○ | — | ❌ |
 | 2 | 2.2 | `api.routers.health`, `CheckReadiness`, `SqlDatabaseProbe` | D7 | 4 ✓, 9 ○ | — | ❌ |
 | 2 | 2.3 | `api.errors`, `api.openapi.build_openapi`, `openapi.yaml` | D6, D16 | 7 ○, 7.1 ○, 11 ○, 11.1 ○ | — | ❌ |
@@ -32,7 +32,7 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 | **3** · Autenticación en la API | 3.1 | `ApiGatewayClaimsAuthenticator`, `LocalJwksAuthenticator`, `current_identity`, `api.routers.me`, `config.Settings`, `main.create_app` | D9, ADR 0005 | 8 ○, 8.1 ○ | — | ❌ |
 | 3 | 3.2 | `ApiGatewayClaimsAuthenticator`, `LocalJwksAuthenticator`, `current_identity`, `api.routers.me`, `config.Settings`, `main.create_app` | D9, ADR 0005 | 8 ○, 8.1 ○ | — | ❌ |
 | 3 | 3.3 | `ApiGatewayClaimsAuthenticator`, `LocalJwksAuthenticator`, `current_identity`, `api.routers.me`, `config.Settings`, `main.create_app` | D9, ADR 0005 | 8 ○, 8.2 ○, 12 ○ | — | ❌ |
-| 3 | 3.4 | `ApiGatewayClaimsAuthenticator`, `LocalJwksAuthenticator`, `current_identity`, `api.routers.me`, `config.Settings`, `main.create_app` | D9, ADR 0005 | 6 ○, 6.1 ○ | — | ❌ |
+| 3 | 3.4 | `ApiGatewayClaimsAuthenticator`, `LocalJwksAuthenticator`, `current_identity`, `api.routers.me`, `config.Settings`, `main.create_app` | D9, ADR 0005 | 6 ✓, 6.1 ✓ | `backend/tests/unit/test_config.py::test_settings_prod_con_todas_las_variables_locales_las_nombra_todas`<br>`backend/tests/unit/test_config.py::test_settings_prod_con_variable_local_falla_nombrandola_sin_mostrar_el_valor`<br>`backend/tests/unit/test_config.py::test_settings_prod_con_variable_local_vacia_tambien_falla`<br>`backend/tests/unit/test_config_properties.py::test_settings_prod_con_cualquier_variable_local_falla_sin_revelar_valores` | ✅ |
 | 3 | 3.5 | `ApiGatewayClaimsAuthenticator`, `LocalJwksAuthenticator`, `current_identity`, `api.routers.me`, `config.Settings`, `main.create_app` | D9, ADR 0005 | 8 ○ | — | ❌ |
 | **4** · Identidad con Amazon Cognito | 4.1 | Módulo `identity`, autorizador JWT del módulo `api` | D11, D12, ADR 0003, T-7 | 17 ○ | — | ❌ |
 | 4 | 4.2 | Módulo `identity`, autorizador JWT del módulo `api` | D11, D12, ADR 0003, T-7 | 17 ○, 23 ○ | — | ❌ |

@@ -453,7 +453,7 @@ documentación de la versión 6.69.1.
 | `DATABASE_HOST`, `DATABASE_PORT`, `DATABASE_NAME`, `DATABASE_USER` | `str`, `int`, `str`, `str` | Obligatorias | Obligatorias |
 | `DATABASE_PASSWORD` | `SecretStr` | Obligatoria | **Prohibida** (IAM) |
 | `DATABASE_CONNECT_TIMEOUT_S` | `int`, 1–25, por defecto 20 | Opcional | Opcional |
-| `LOCAL_JWT_ISSUER`, `LOCAL_JWKS_URL`, `LOCAL_JWT_CLIENT_IDS` | `str`, `HttpUrl`, `list[str]` | Obligatorias | **Prohibidas** |
+| `LOCAL_JWT_ISSUER`, `LOCAL_JWKS_URL`, `LOCAL_JWT_CLIENT_IDS` | `str`, `HttpUrl`, `list[str]` (en la variable, una lista separada por comas: `web,collector`) | Obligatorias | **Prohibidas** |
 | `LOG_LEVEL` | `Literal["DEBUG", "INFO", "WARNING", "ERROR"]`, por defecto `INFO` | Opcional | Opcional |
 
 Los errores de validación nombran la variable y el problema, nunca el valor (Property 5).

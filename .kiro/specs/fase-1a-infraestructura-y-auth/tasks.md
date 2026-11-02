@@ -33,11 +33,11 @@ runbook del diseño, no son tareas de código.
   - Subtarea de prueba de arquitectura: una importación prohibida (p. ej. `api` importando `infrastructure`) hace fallar
     `lint-imports`.
   - _Requirements: 2.5, NFR-1_
-- [ ] 6. Implementar `config.Settings` con validación por entorno
+- [x] 6. Implementar `config.Settings` con validación por entorno
   - Variables y reglas de «Data Models»: `DATABASE_PASSWORD` y `LOCAL_*` prohibidas en `prod`, obligatorias en
     `local`/`test`; los errores nombran la variable sin su valor.
   - _Requirements: 1.4, 3.4_
-  - [ ] 6.1 Prueba basada en propiedades: la configuración de `prod` es cerrada
+  - [x] 6.1 Prueba basada en propiedades: la configuración de `prod` es cerrada
     - _Property: 5_
     - _Requirements: 1.4, 3.4_
 - [ ] 7. Implementar logs JSON, identificador de correlación y manejadores de errores
