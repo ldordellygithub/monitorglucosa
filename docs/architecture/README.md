@@ -24,6 +24,7 @@
 | [0003](../adr/0003-collector-authentication.md) | Autenticación del colector con refresh token de Cognito | Aceptado |
 | [0004](../adr/0004-api-network-without-nat.md) | Acceso de la API a Aurora sin NAT Gateway | Aceptado |
 | [0005](../adr/0005-containerized-local-environment.md) | Entorno local con Docker y la misma imagen de la API en Lambda | Aceptado |
+| [0006](../adr/0006-database-migrations-with-an-in-vpc-migrator-lambda.md) | Migraciones de base de datos con una Lambda `migrator` dentro de la VPC | Aceptado |
 
 ## Steering
 
