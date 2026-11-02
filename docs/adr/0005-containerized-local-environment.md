@@ -40,4 +40,4 @@ El proyecto debe funcionar igual en el equipo del autor, en cualquier otra máqu
 
 ## Referencias
 
-- [Lambda Web Adapter: contexto de la petición y de Lambda](https://awslabs.github.io/aws-lambda-web-adapter/features/request-context.html)
+- [Lambda Web Adapter: contexto de la petición y de Lambda](https://aws.github.io/aws-lambda-web-adapter/features/request-context.html)

@@ -20,7 +20,7 @@ runbook del diseño, no son tareas de código.
 - [x] 3. Registrar el ADR 0008: rol de despliegue con *permissions boundary* y pipeline público sin fugas (D4)
   - Incluir la lista de excepciones de NFR-4 y las medidas contra la exposición en los logs públicos de Actions.
   - _Requirements: 7.2, NFR-4, NFR-5_
-- [ ] 4. Registrar el ADR 0009: reanudación de Aurora con 503 reintentable dentro del límite de 30 s (D7)
+- [x] 4. Registrar el ADR 0009: reanudación de Aurora con 503 reintentable dentro del límite de 30 s (D7)
   - Corregir la referencia rota del ADR 0005 a la documentación de Lambda Web Adapter si sigue devolviendo 404.
   - _Requirements: 2.2, 5.4, NFR-2_
 

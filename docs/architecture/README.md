@@ -27,6 +27,7 @@
 | [0006](../adr/0006-database-migrations-with-an-in-vpc-migrator-lambda.md) | Migraciones de base de datos con una Lambda `migrator` dentro de la VPC | Aceptado |
 | [0007](../adr/0007-idempotent-sql-bootstrap-through-rds-data-api.md) | Bootstrap SQL idempotente por RDS Data API | Aceptado |
 | [0008](../adr/0008-scoped-deployment-role-and-leak-free-pipeline.md) | Rol de despliegue acotado con *permissions boundary* y pipeline público sin fugas | Aceptado |
+| [0009](../adr/0009-aurora-resume-as-a-retryable-503-within-30-seconds.md) | Reanudación de Aurora con un 503 reintentable dentro del límite de 30 s | Aceptado |
 
 ## Steering
 

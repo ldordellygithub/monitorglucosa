@@ -16,7 +16,7 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 
 ## fase-1a-infraestructura-y-auth
 
-[Requisitos](../.kiro/specs/fase-1a-infraestructura-y-auth/requirements.md) · [Diseño](../.kiro/specs/fase-1a-infraestructura-y-auth/design.md) · [Tareas](../.kiro/specs/fase-1a-infraestructura-y-auth/tasks.md) · 0/45 criterios verificados (0 %) · en curso · tareas 3/33
+[Requisitos](../.kiro/specs/fase-1a-infraestructura-y-auth/requirements.md) · [Diseño](../.kiro/specs/fase-1a-infraestructura-y-auth/design.md) · [Tareas](../.kiro/specs/fase-1a-infraestructura-y-auth/tasks.md) · 0/45 criterios verificados (0 %) · en curso · tareas 4/33
 
 | Requisito | Criterio | Componentes | Decisiones | Tareas | Pruebas | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -25,7 +25,7 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 | 1 | 1.3 | `compose.yaml`, `backend/Dockerfile`, `backend/.dockerignore`, `dev/jwt-issuer`, `dev/postgres/init` | D10, D15, ADR 0005 | 12 ○ | — | ❌ |
 | 1 | 1.4 | `config.Settings` | D9 | 6 ○, 6.1 ○ | — | ❌ |
 | **2** · API base, salud y errores | 2.1 | `api.routers.health`, `CheckReadiness`, `SqlDatabaseProbe` | D7 | 9 ○ | — | ❌ |
-| 2 | 2.2 | `api.routers.health`, `CheckReadiness`, `SqlDatabaseProbe` | D7 | 4 ○, 9 ○ | — | ❌ |
+| 2 | 2.2 | `api.routers.health`, `CheckReadiness`, `SqlDatabaseProbe` | D7 | 4 ✓, 9 ○ | — | ❌ |
 | 2 | 2.3 | `api.errors`, `api.openapi.build_openapi`, `openapi.yaml` | D6, D16 | 7 ○, 7.1 ○, 11 ○, 11.1 ○ | — | ❌ |
 | 2 | 2.4 | `RequestLogMiddleware`, `JsonFormatter` | — | 7 ○, 7.2 ○ | — | ❌ |
 | 2 | 2.5 | Contratos de import-linter | — | 5 ○ | — | ❌ |
@@ -42,7 +42,7 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 | **5** · Red y base de datos en AWS | 5.1 | Módulos `network` y `database` | D13, ADR 0002, ADR 0004 | 16 ○, 24 ○ | — | ❌ |
 | 5 | 5.2 | Módulos `network` y `database` | D13, ADR 0002, ADR 0004 | 16 ○ | — | ❌ |
 | 5 | 5.3 | `infrastructure.db.engine`, `scripts/sql/bootstrap.sql`, `scripts/db_bootstrap.py` | D3, D8 | 2 ✓, 9 ○, 10 ○, 10.1 ○, 23 ○ | — | ❌ |
-| 5 | 5.4 | `infrastructure.db.engine`, `SqlDatabaseProbe` | D8, ADR 0004 | 4 ○, 9 ○, 23 ○ | — | ❌ |
+| 5 | 5.4 | `infrastructure.db.engine`, `SqlDatabaseProbe` | D8, ADR 0004 | 4 ✓, 9 ○, 23 ○ | — | ❌ |
 | 5 | 5.5 | Módulos `network` y `database` | D13, ADR 0002, ADR 0004 | 16 ○ | — | ❌ |
 | **6** · Exposición de la API y del sitio | 6.1 | Módulos `api` y `site`, `bootstrap` (ECR) | D13, ADR 0004, ADR 0005 | 15 ○, 18 ○ | — | ❌ |
 | 6 | 6.2 | Módulos `api` y `site`, `bootstrap` (ECR) | D13, ADR 0004, ADR 0005 | 18 ○, 24 ○ | — | ❌ |
@@ -60,7 +60,7 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 | 8 | 8.4 | Módulo `operations` | D11, D14 | 19 ○, 23 ○, 24 ○ | — | ❌ |
 | 8 | 8.5 | Módulo `operations` | D11, D14 | 19 ○ | — | ❌ |
 | **NFR** · No funcionales | NFR-1 | Transversal (pytest-cov) | — | 5 ○ | — | ❌ |
-| NFR | NFR-2 | `infrastructure.db.engine`, Lambda `api`, `scripts/smoke_test.py` | D7, D8 | 4 ○, 9 ○, 14 ○, 23 ○ | — | ❌ |
+| NFR | NFR-2 | `infrastructure.db.engine`, Lambda `api`, `scripts/smoke_test.py` | D7, D8 | 4 ✓, 9 ○, 14 ○, 23 ○ | — | ❌ |
 | NFR | NFR-3 | Módulo `operations`, estimación de coste | D13, D14, T-3 | 19 ○, 23 ○ | — | ❌ |
 | NFR | NFR-4 | Políticas IAM de los módulos, checkov | D4 | 3 ✓, 21 ○ | — | ❌ |
 | NFR | NFR-5 | `JsonFormatter`, `RequestLogMiddleware`, `.dockerignore`, `deploy.yml`, `deploy.py` | D3, D4, D11 | 3 ✓, 7 ○, 7.2 ○, 21 ○, 23 ○ | — | ❌ |
