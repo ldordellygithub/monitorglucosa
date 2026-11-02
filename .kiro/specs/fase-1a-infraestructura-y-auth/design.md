@@ -332,20 +332,23 @@ de sesión.
 
 | Rol | Confianza | Permisos | Boundary |
 | --- | --- | --- | --- |
-| `monitorglucosa-deploy` | `token.actions.githubusercontent.com` con `sub = repo:ldordellygithub/monitorglucosa:environment:prod` y `aud = sts.amazonaws.com` | Recursos `monitorglucosa-*` de los 7 módulos; `iam:CreateRole`/`PutRolePolicy`/`AttachRolePolicy` solo con `iam:PermissionsBoundary` = el boundary; `Deny` sobre el boundary y sobre el propio rol; objeto del estado en S3; `ecr:*` de push sobre el repositorio; `lambda:InvokeFunction` del `migrator`; `execute-api:Invoke` solo en `GET /health/ready`; `rds-data:ExecuteStatement` sobre el clúster; `secretsmanager:GetSecretValue` sobre el secreto maestro; `ssm:GetParameter` sobre el parámetro del correo | No: es quien lo impone |
-| `monitorglucosa-api` | `lambda.amazonaws.com` | `logs:CreateLogStream`/`PutLogEvents` en su grupo; `rds-db:connect` en `dbuser:<id del clúster>/mg_api`; interfaces de red de la VPC | Sí |
+| `monitorglucosa-deploy` | `token.actions.githubusercontent.com` con `sub = repo:ldordellygithub/monitorglucosa:environment:prod` y `aud = sts.amazonaws.com` | Recursos `monitorglucosa-*` de los 7 módulos; `iam:CreateRole`/`PutRolePolicy`/`AttachRolePolicy`/`PutRolePermissionsBoundary` solo con `iam:PermissionsBoundary` = el boundary; `Deny` sobre editar o retirar el boundary (`DeleteRolePermissionsBoundary`) y sobre el propio rol; objeto del estado en S3; `ecr:*` de push sobre el repositorio; `lambda:InvokeFunction` del `migrator`; `execute-api:Invoke` solo en `GET /health/ready`; `rds-data:ExecuteStatement` sobre el clúster; `secretsmanager:GetSecretValue` sobre el secreto maestro; `ssm:GetParameter` sobre el parámetro del correo | No: es quien lo impone |
+| `monitorglucosa-api` | `lambda.amazonaws.com` | `logs:CreateLogStream`/`PutLogEvents` en su grupo; `rds-db:connect` en `dbuser:<id del clúster>/mg_api`; las 6 acciones de EC2 de la VPC, con un `Deny` de esas mismas acciones al código de la función (`lambda:SourceFunctionArn`) | Sí |
 | `monitorglucosa-migrator` | `lambda.amazonaws.com` | Igual que `api`, con `mg_migrator` | Sí |
 | Administrador (Identity Center) | Propietario con MFA | Bootstrap y emergencias (`AdminUserGlobalSignOut`, restauración) | — |
 
 Excepciones a NFR-4, porque AWS no permite acotarlas a un recurso:
 
-- `ecr:GetAuthorizationToken`;
-- `ec2:CreateNetworkInterface`, `ec2:DescribeNetworkInterfaces` y `ec2:DeleteNetworkInterface` de las Lambdas en una
-  VPC;
+- `ecr:GetAuthorizationToken` (rol de despliegue);
+- las 6 acciones de EC2 que exige una Lambda en una VPC (roles `api` y `migrator`): `ec2:CreateNetworkInterface`,
+  `ec2:DescribeNetworkInterfaces`, `ec2:DescribeSubnets`, `ec2:DeleteNetworkInterface`,
+  `ec2:AssignPrivateIpAddresses` y `ec2:UnassignPrivateIpAddresses`, y el `Deny` de esas mismas acciones al código de
+  la función con la condición `lambda:SourceFunctionArn`;
 - las acciones de solo lectura `Describe*` y `List*` que Terraform necesita para refrescar el estado, enumeradas una
-  por una en el código.
+  por una en el código, incluidas las comprobaciones de red de Lambda (`ec2:DescribeSecurityGroups`,
+  `ec2:DescribeSubnets`, `ec2:DescribeVpcs` y `ec2:GetSecurityGroupsForVpc`) (rol de despliegue).
 
-Cada excepción lleva un comentario con su motivo y una supresión con nombre en checkov.
+Cada excepción lleva un comentario con su motivo y una supresión con nombre en checkov. Detalle y fuentes: ADR 0008.
 
 ### Configuración de las Lambdas
 
@@ -574,6 +577,7 @@ las specs. Las pruebas usan solo datos sintéticos.
 | 4.2 | Alta del usuario y primer inicio de sesión en la página de Cognito: contraseña temporal y alta del TOTP |
 | 4.5 | Con un script de un solo uso: un token caducado y uno de otro user pool → 401 de API Gateway; un ID token → rechazo por ámbito |
 | 2.3, NFR-6 | Respuestas reales de API Gateway en `prod` (sin token, ID token, sin firma, throttling): código y cuerpo observados; si difieren de `openapi.yaml`, se corrige el contrato en la misma tarea |
+| 5.3 | Primer despliegue: Data API acepta el secreto gestionado por RDS, el bloque `DO` como una sola sentencia y la contraseña `scram-sha-256` (verificación bloqueante de D3 y del ADR 0007) |
 | 5.4 | Tras 300 s sin actividad, `ServerlessDatabaseCapacity` = 0 |
 | 6.3 | Ráfaga de 30 peticiones a `/health` → al menos un 429 |
 | 7.3 | El job `deploy` espera la aprobación del revisor de `prod` |
@@ -581,6 +585,7 @@ las specs. Las pruebas usan solo datos sintéticos.
 | 8.4 | `aws cloudwatch set-alarm-state` en cada alarma → correo recibido |
 | NFR-2 | p95 de `/health` y `/api/v1/me` medido con 100 peticiones calientes; tiempo de reanudación tras más de 24 h |
 | NFR-3 | Estimación de este diseño y factura del primer mes |
+| NFR-5 | Log público del primer despliegue en Actions: sin ID de cuenta, ARN ni nombre del bucket de estado (D4, ADR 0008) |
 
 ## Decisions
 
@@ -619,8 +624,8 @@ las specs. Las pruebas usan solo datos sintéticos.
   vive en Secrets Manager y rota cada 7 días. Sin NAT, la Lambda no llega a Secrets Manager, y un endpoint de interfaz
   cobra por hora y por zona.
 - **Decisión:** `scripts/db_bootstrap.py` ejecuta, en cada despliegue y antes de migrar, un único bloque `DO $$ … $$`
-  idempotente por Data API, con el secreto gestionado por RDS. Data API no admite varias sentencias por llamada, pero
-  un bloque `DO` cuenta como una. Solo crea roles, el esquema y permisos; nunca toca datos. En local se ejecuta el
+  idempotente por Data API, con el secreto gestionado por RDS. Data API no admite varias sentencias por llamada; se
+  espera que un bloque `DO` cuente como una (verificación 2, abajo). Solo crea roles, el esquema y permisos; nunca toca datos. En local se ejecuta el
   mismo archivo como `mg_admin`, un rol que imita al maestro de RDS.
 - **Alternativas descartadas:** ejecutarlo a mano una vez (cada despliegue dependería de un paso manual); un endpoint de
   interfaz de Secrets Manager (coste); la contraseña maestra en variables de entorno (lo prohíbe `T-11`).
@@ -628,8 +633,14 @@ las specs. Las pruebas usan solo datos sintéticos.
   `rds-data:ExecuteStatement` y `secretsmanager:GetSecretValue` solo sobre ese clúster y ese secreto. No amplía su
   poder real: ya puede cambiar la contraseña maestra con `ModifyDBCluster`. Precisa el alcance de ADR 0004, que
   rechazó Data API para los repositorios, no para esto.
-- **Verificación bloqueante en su tarea:** que Data API acepte el secreto gestionado por RDS. Lo usa la documentación
-  de CDK, pero AWS no lo afirma de forma explícita. Si falla, la tarea se detiene y se replantea con el propietario.
+- **Verificación bloqueante en el primer despliegue** (ADR 0007; no se puede probar en local):
+  1. Que Data API acepte el secreto gestionado por RDS. Lo usa la documentación de CDK y la de `ExecuteStatement` lo
+     sugiere (ARN `rds!cluster-…`), pero AWS no lo afirma de forma explícita.
+  2. Que acepte el bloque `DO $$ … $$` como una sola sentencia: es una inferencia, no algo documentado.
+  3. Que la contraseña generada por RDS cumpla el requisito `scram-sha-256` de Data API en PostgreSQL 14 o superior.
+
+  Si alguna falla, el despliegue falla antes de migrar, la API en servicio no cambia y el diseño se replantea con el
+  propietario. El resultado se registra en `manual-checks.md`.
 - **Fuentes:** [limitaciones de Data API](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/data-api.limitations.html),
   [errores de `ExecuteStatement`](https://docs.aws.amazon.com/rdsdataservice/latest/APIReference/API_ExecuteStatement.html) y
   [pausa automática](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2-auto-pause.html).
@@ -640,12 +651,15 @@ las specs. Las pruebas usan solo datos sintéticos.
   repositorio público los logs de Actions son públicos.
 - **Decisión:**
   - El rol de despliegue solo crea o modifica roles con el boundary `monitorglucosa-workload-boundary`. Un `Deny`
-    explícito le impide editar el boundary y su propio rol. Su alcance se acota por el prefijo `monitorglucosa-` y por
-    `aws:RequestedRegion = sa-east-1`, salvo los servicios globales (IAM, CloudFront y Budgets).
+    explícito le impide editar o retirar el boundary (`iam:DeleteRolePermissionsBoundary`) y modificar su propio rol.
+    Su alcance se acota por el prefijo `monitorglucosa-` y por `aws:RequestedRegion = sa-east-1`, salvo los servicios
+    globales (IAM, CloudFront y Budgets), cuyo único endpoint está en `us-east-1`.
   - Terraform escribe en el log solo el resumen del plan. El ARN del rol y el nombre del bucket son secretos del
     entorno, así que se enmascaran; `deploy.py` enmascara además el ID de cuenta con `::add-mask::`; los outputs
     sensibles se marcan `sensitive`, y no se suben planes como artefactos.
   - Las excepciones de NFR-4 se listan en «IAM: roles y permisos».
+  - Los roles de las Lambdas niegan al código de la función las acciones de EC2 de la VPC con la condición
+    `lambda:SourceFunctionArn`, como recomienda AWS: solo las usa el servicio de Lambda (decidido el 2026-11-02).
 - **Alternativas descartadas:** `AdministratorAccess` (contradice el mínimo privilegio); un rol de solo lectura para
   `plan` en los PR (exige otra condición de confianza, distinta de la decidida en `tech.md`).
 - **Consecuencias:** el propietario aprueba el despliegue sin ver el plan completo en GitHub; lo revisa con

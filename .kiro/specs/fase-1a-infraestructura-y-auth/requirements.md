@@ -123,7 +123,7 @@ registro, historial y web solo añadan funcionalidad. Materializa los ADR 0002, 
 - Registro de supresiones en S3 y prueba trimestral de restauración: llegan con el primer borrado de datos.
 - Ampliar `kspec github apply` para declarar el revisor del entorno `prod` (`G-2`): se hace en el kit, antes de la tarea de despliegue.
 - Crear la cuenta de AWS: requisito previo del bootstrap.
-- Staging, dominio propio, ACM, NAT Gateway, RDS Proxy y RDS Data API.
+- Staging, dominio propio, ACM, NAT Gateway, RDS Proxy y RDS Data API como ruta de datos de la API (el pipeline solo la usa para el bootstrap SQL de roles: D3, ADR 0007).
 
 ## Clarifications
 
@@ -137,3 +137,4 @@ registro, historial y web solo añadan funcionalidad. Materializa los ADR 0002, 
 - 2026-11-01: ¿Cuánto dura el refresh token del cliente web? → 1 día (el del colector sigue en 30 días por `T-7`).
 - 2026-11-01: ¿La spec documenta el contrato de la API? → Sí: contrato OpenAPI 3.1 de la spec (`openapi.yaml`), conforme con el que genera FastAPI, y referencia publicada en `docs/api/` (NFR-6).
 - 2026-11-01: Corrección de 2.3: AWS no documenta el código exacto que devuelve HTTP API por timeout ni el cuerpo de un rechazo IAM; la redacción ya no fija esos códigos y la verificación manual registra los observados.
+- 2026-11-02: El pipeline usa RDS Data API para el bootstrap SQL. ¿Contradice el Out of Scope? → No: queda fuera como ruta de datos de la API (ADR 0004); el pipeline la usa solo para crear roles, el esquema y permisos (D3, ADR 0007).

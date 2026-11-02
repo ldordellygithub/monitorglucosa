@@ -142,8 +142,9 @@ runbook del diseño, no son tareas de código.
 - [ ] 23. Documentar el runbook, los comandos reales y las verificaciones manuales
   - `docs/guia-de-desarrollo.md` (primer despliegue, Swagger UI en local), `tech.md · Comandos habituales`, NFR de
     latencia (≤ 60 s sumando reintentos) y flujo de despliegue con migraciones (con aprobación del propietario y
-    `kspec steering-sync`), y `manual-checks.md` con los criterios no automatizables.
-  - _Requirements: 4.2, 4.5, 5.4, 6.3, 7.3, 8.3, 8.4, NFR-2, NFR-3, NFR-6_
+    `kspec steering-sync`), y `manual-checks.md` con los criterios no automatizables, incluidas las verificaciones
+    del primer despliegue de los ADR 0007 (Data API) y 0008 (log público).
+  - _Requirements: 4.2, 4.5, 5.3, 5.4, 6.3, 7.3, 8.3, 8.4, NFR-2, NFR-3, NFR-5, NFR-6_
 - [ ] 24. Actualizar las vistas de arquitectura
   - Modelo `docs/architecture/diagrams.py` según «Architecture Views» (vistas 02, 03, 04, 08, 09, 10 y la nueva 13),
     `kspec diagrams export` y `kspec diagrams check` en verde.

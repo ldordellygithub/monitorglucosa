@@ -41,7 +41,7 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 | 4 | 4.5 | Módulo `identity`, autorizador JWT del módulo `api` | D11, D12, ADR 0003, T-7 | 18 ○, 23 ○, 24 ○ | — | ❌ |
 | **5** · Red y base de datos en AWS | 5.1 | Módulos `network` y `database` | D13, ADR 0002, ADR 0004 | 16 ○, 24 ○ | — | ❌ |
 | 5 | 5.2 | Módulos `network` y `database` | D13, ADR 0002, ADR 0004 | 16 ○ | — | ❌ |
-| 5 | 5.3 | `infrastructure.db.engine`, `scripts/sql/bootstrap.sql`, `scripts/db_bootstrap.py` | D3, D8 | 2 ✓, 9 ○, 10 ○, 10.1 ○ | — | ❌ |
+| 5 | 5.3 | `infrastructure.db.engine`, `scripts/sql/bootstrap.sql`, `scripts/db_bootstrap.py` | D3, D8 | 2 ✓, 9 ○, 10 ○, 10.1 ○, 23 ○ | — | ❌ |
 | 5 | 5.4 | `infrastructure.db.engine`, `SqlDatabaseProbe` | D8, ADR 0004 | 4 ○, 9 ○, 23 ○ | — | ❌ |
 | 5 | 5.5 | Módulos `network` y `database` | D13, ADR 0002, ADR 0004 | 16 ○ | — | ❌ |
 | **6** · Exposición de la API y del sitio | 6.1 | Módulos `api` y `site`, `bootstrap` (ECR) | D13, ADR 0004, ADR 0005 | 15 ○, 18 ○ | — | ❌ |
@@ -63,7 +63,7 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 | NFR | NFR-2 | `infrastructure.db.engine`, Lambda `api`, `scripts/smoke_test.py` | D7, D8 | 4 ○, 9 ○, 14 ○, 23 ○ | — | ❌ |
 | NFR | NFR-3 | Módulo `operations`, estimación de coste | D13, D14, T-3 | 19 ○, 23 ○ | — | ❌ |
 | NFR | NFR-4 | Políticas IAM de los módulos, checkov | D4 | 3 ✓, 21 ○ | — | ❌ |
-| NFR | NFR-5 | `JsonFormatter`, `RequestLogMiddleware`, `.dockerignore`, `deploy.yml`, `deploy.py` | D3, D4, D11 | 3 ✓, 7 ○, 7.2 ○, 21 ○ | — | ❌ |
+| NFR | NFR-5 | `JsonFormatter`, `RequestLogMiddleware`, `.dockerignore`, `deploy.yml`, `deploy.py` | D3, D4, D11 | 3 ✓, 7 ○, 7.2 ○, 21 ○, 23 ○ | — | ❌ |
 | NFR | NFR-6 | `openapi.yaml`, `api.openapi.build_openapi`, `backend/tools/export_openapi.py`, `docs/api/README.md`, pruebas de contrato | D16, D17 | 11 ○, 11.1 ○, 23 ○ | — | ❌ |
 
 ## Pruebas huérfanas

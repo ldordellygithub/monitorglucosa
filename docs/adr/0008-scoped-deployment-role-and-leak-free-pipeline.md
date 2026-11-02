@@ -33,7 +33,7 @@ Datos verificados en la documentación oficial (2026-11-02):
 **Excepciones a NFR-4** (`Action`/`Resource` sin acotar, porque AWS no lo permite). Cada una lleva un comentario con su motivo y una supresión con nombre en checkov:
 
 1. `ecr:GetAuthorizationToken`.
-2. Las seis acciones de EC2 de los roles de las Lambdas `api` y `migrator` (no del rol de despliegue), listadas arriba. El diseño enumeraba tres; la documentación exige seis, y esta lista es la que prevalece.
+2. Las seis acciones de EC2 de los roles de las Lambdas `api` y `migrator` (no del rol de despliegue), listadas arriba, y el `Deny` de esas mismas acciones al código de la función con la condición `lambda:SourceFunctionArn`, que también exige `Resource: "*"`.
 3. Las acciones de solo lectura `Describe*` y `List*` que Terraform necesita para refrescar el estado, enumeradas una por una en el código, nunca con comodín. Incluye las comprobaciones de red que Lambda hace con el rol de quien despliega (`ec2:DescribeSecurityGroups`, `ec2:DescribeSubnets`, `ec2:DescribeVpcs` y `ec2:GetSecurityGroupsForVpc`).
 
 **Pipeline público sin fugas (NFR-5):**
@@ -59,7 +59,7 @@ Datos verificados en la documentación oficial (2026-11-02):
 - Como el rol de despliegue no puede modificarse a sí mismo ni al boundary, cualquier cambio en esos recursos (módulo `bootstrap`) solo lo aplica el administrador desde local, no el pipeline.
 - La redacción de GitHub no está garantizada: la defensa principal es no imprimir valores sensibles, no confiar en el enmascarado. El primer despliegue real es la prueba: se revisa su log público en busca de ID de cuenta y ARN.
 - El boundary no acota las políticas de recursos que conceden acceso directo a una sesión del rol: cada política de recursos nueva (ECR, S3, Secrets Manager) se revisa por separado.
-- Los permisos de EC2 de las Lambdas en una VPC se conceden también, de forma implícita, al código de la función. AWS recomienda un `Deny` con la condición `lambda:SourceFunctionArn` para que solo los use el servicio de Lambda. Se decide al implementar el módulo `api` (tarea 18).
+- Los permisos de EC2 de las Lambdas en una VPC se conceden también, de forma implícita, al código de la función. Por eso cada rol de Lambda los niega al código con `lambda:SourceFunctionArn`, como recomienda AWS, y solo los usa el servicio de Lambda (decidido el 2026-11-02; se implementa en la tarea 18).
 - Se prueba con `terraform test` (la política de confianza solo acepta ese `sub` y ese `aud`; los roles de las Lambdas llevan el boundary), con checkov (sin `*` salvo las excepciones con nombre) y con gitleaks y semgrep en CI. `terraform test` usa proveedores simulados: comprueba el contenido de las políticas, no cómo las evalúa AWS; eso solo lo confirma el primer `apply`. Que ningún log público muestre datos de la cuenta solo se comprueba a mano en el primer despliegue.
 
 ## Referencias
