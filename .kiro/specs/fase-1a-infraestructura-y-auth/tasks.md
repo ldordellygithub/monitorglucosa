@@ -53,8 +53,10 @@ runbook del diseño, no son tareas de código.
     - _Requirements: 2.4, NFR-5_
 - [ ] 8. Implementar la autenticación: puerto, dos adaptadores y `GET /api/v1/me`
   - `Identity`, `Authenticator`, `ApiGatewayClaimsAuthenticator`, `LocalJwksAuthenticator` (PyJWT), `current_identity`
-    y el router `me`; selección por `ENVIRONMENT` en `create_app`. Ambos exigen `token_use = access`.
-  - _Requirements: 3.1, 3.2, 3.3, 3.5_
+    y el router `me`; selección por `ENVIRONMENT` en `create_app`. Ambos exigen `token_use = access`. Prueba de que, con
+    `ENVIRONMENT = prod`, `create_app` nunca construye `LocalJwksAuthenticator` (la otra mitad de 3.4; `Settings` ya
+    cubre la configuración).
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
   - [ ] 8.1 Prueba basada en propiedades: la autenticación en `prod` falla cerrada
     - _Property: 2_
     - _Requirements: 3.1, 3.2_
