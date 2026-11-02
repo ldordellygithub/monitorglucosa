@@ -8,15 +8,15 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 
 | Fase | Spec | Estado | Criterios | Con prueba | Manuales | Sin verificar | Cobertura |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | [fase-1a-infraestructura-y-auth](#fase-1a-infraestructura-y-auth) | en curso | 45 | 0 | 0 | 45 | 0 % |
+| 1 | [fase-1a-infraestructura-y-auth](#fase-1a-infraestructura-y-auth) | en curso | 45 | 1 | 0 | 44 | 2 % |
 
 | Fase | Specs | Criterios verificados |
 | --- | --- | --- |
-| 1 | 1 | 0/45 (0 %) |
+| 1 | 1 | 1/45 (2 %) |
 
 ## fase-1a-infraestructura-y-auth
 
-[Requisitos](../.kiro/specs/fase-1a-infraestructura-y-auth/requirements.md) · [Diseño](../.kiro/specs/fase-1a-infraestructura-y-auth/design.md) · [Tareas](../.kiro/specs/fase-1a-infraestructura-y-auth/tasks.md) · 0/45 criterios verificados (0 %) · en curso · tareas 4/33
+[Requisitos](../.kiro/specs/fase-1a-infraestructura-y-auth/requirements.md) · [Diseño](../.kiro/specs/fase-1a-infraestructura-y-auth/design.md) · [Tareas](../.kiro/specs/fase-1a-infraestructura-y-auth/tasks.md) · 1/45 criterios verificados (2 %) · en curso · tareas 5/33
 
 | Requisito | Criterio | Componentes | Decisiones | Tareas | Pruebas | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -28,7 +28,7 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 | 2 | 2.2 | `api.routers.health`, `CheckReadiness`, `SqlDatabaseProbe` | D7 | 4 ✓, 9 ○ | — | ❌ |
 | 2 | 2.3 | `api.errors`, `api.openapi.build_openapi`, `openapi.yaml` | D6, D16 | 7 ○, 7.1 ○, 11 ○, 11.1 ○ | — | ❌ |
 | 2 | 2.4 | `RequestLogMiddleware`, `JsonFormatter` | — | 7 ○, 7.2 ○ | — | ❌ |
-| 2 | 2.5 | Contratos de import-linter | — | 5 ○ | — | ❌ |
+| 2 | 2.5 | Contratos de import-linter | — | 5 ✓ | `backend/tests/architecture/test_import_contracts.py::test_lint_imports_cadena_api_application_domain_es_legitima`<br>`backend/tests/architecture/test_import_contracts.py::test_lint_imports_codigo_actual_cumple_los_contratos`<br>`backend/tests/architecture/test_import_contracts.py::test_lint_imports_copia_sin_violaciones_cumple_los_contratos`<br>`backend/tests/architecture/test_import_contracts.py::test_lint_imports_importacion_prohibida_rompe_el_contrato` | ✅ |
 | **3** · Autenticación en la API | 3.1 | `ApiGatewayClaimsAuthenticator`, `LocalJwksAuthenticator`, `current_identity`, `api.routers.me`, `config.Settings`, `main.create_app` | D9, ADR 0005 | 8 ○, 8.1 ○ | — | ❌ |
 | 3 | 3.2 | `ApiGatewayClaimsAuthenticator`, `LocalJwksAuthenticator`, `current_identity`, `api.routers.me`, `config.Settings`, `main.create_app` | D9, ADR 0005 | 8 ○, 8.1 ○ | — | ❌ |
 | 3 | 3.3 | `ApiGatewayClaimsAuthenticator`, `LocalJwksAuthenticator`, `current_identity`, `api.routers.me`, `config.Settings`, `main.create_app` | D9, ADR 0005 | 8 ○, 8.2 ○, 12 ○ | — | ❌ |
@@ -59,7 +59,7 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 | 8 | 8.3 | Módulo `operations` | D11, D14 | 19 ○, 23 ○ | — | ❌ |
 | 8 | 8.4 | Módulo `operations` | D11, D14 | 19 ○, 23 ○, 24 ○ | — | ❌ |
 | 8 | 8.5 | Módulo `operations` | D11, D14 | 19 ○ | — | ❌ |
-| **NFR** · No funcionales | NFR-1 | Transversal (pytest-cov) | — | 5 ○ | — | ❌ |
+| **NFR** · No funcionales | NFR-1 | Transversal (pytest-cov) | — | 5 ✓ | — | ⚠️ |
 | NFR | NFR-2 | `infrastructure.db.engine`, Lambda `api`, `scripts/smoke_test.py` | D7, D8 | 4 ✓, 9 ○, 14 ○, 23 ○ | — | ❌ |
 | NFR | NFR-3 | Módulo `operations`, estimación de coste | D13, D14, T-3 | 19 ○, 23 ○ | — | ❌ |
 | NFR | NFR-4 | Políticas IAM de los módulos, checkov | D4 | 3 ✓, 21 ○ | — | ❌ |

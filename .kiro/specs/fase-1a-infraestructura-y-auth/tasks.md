@@ -26,7 +26,7 @@ runbook del diseño, no son tareas de código.
 
 ## Backend
 
-- [ ] 5. Crear el proyecto `backend/` con las capas y las comprobaciones de calidad
+- [x] 5. Crear el proyecto `backend/` con las capas y las comprobaciones de calidad
   - `pyproject.toml` y `uv.lock` (Python 3.13, `exclude-newer` de 14 días), `src/{domain,application,infrastructure,api}`,
     `main.py`, `config.py`, pytest con el marcador `req` y cobertura, ruff, mypy estricto y los contratos de import-linter
     de `structure.md`. Hooks `mypy` y `pytest` en pre-push (`.pre-commit-config.yaml`) y reglas nuevas de `.gitignore`.

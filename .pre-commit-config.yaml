@@ -1,5 +1,5 @@
 # Generado por /precommit-setup (kit estilo Kiro). Equivale a los hooks de Kiro sobre el stage:
-# al hacer commit revisa secretos, formato y specs; las pruebas en pre-push se añaden cuando existan (ver abajo).
+# al hacer commit revisa secretos, formato y specs; al hacer push, mypy y las pruebas del backend.
 # Instalar en el repo: pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push
 # Actualizar versiones: pre-commit autoupdate (revisa el diff antes de aceptarlo)
 default_install_hook_types: [pre-commit, commit-msg, pre-push]
@@ -53,5 +53,18 @@ repos:
         language: system
         pass_filenames: false
         files: ^\.kiro/specs/
-      # Hook de pruebas (pre-push): pendiente hasta que tech.md tenga el comando real. La primera spec que cree
-      # backend/ o collector/ lo añade aquí (local, stages: [pre-push], pass_filenames: false).
+      - id: backend-mypy
+        name: mypy estricto (backend)
+        entry: bash -c 'cd backend && uv run mypy'
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        files: ^backend/
+      - id: backend-pytest
+        name: pytest sin integración (backend)
+        entry: bash -c 'cd backend && uv run pytest -m "not integration"'
+        language: system
+        stages: [pre-push]
+        pass_filenames: false
+        files: ^backend/
+      # collector/ añade sus hooks de pre-push aquí cuando exista (local, stages: [pre-push]).

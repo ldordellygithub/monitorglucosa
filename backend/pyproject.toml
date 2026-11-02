@@ -1,0 +1,121 @@
+[project]
+name = "monitorglucosa-backend"
+version = "0.1.0"
+description = "API de monitorglucosa: FastAPI con Clean Architecture"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic-settings",
+    "sqlalchemy[asyncio]",
+    "asyncpg",
+    "alembic",
+    "boto3",
+    "pyjwt[crypto]",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+    "import-linter",
+]
+
+[tool.uv]
+# `src` es el paquete raíz (uvicorn src.main:create_app), no un proyecto instalable.
+package = false
+# Regla de versiones (design.md · D15): nada publicado en las últimas dos semanas.
+# Fecha del lock menos 14 días; se actualiza al regenerar uv.lock.
+exclude-newer = "2026-10-19T00:00:00Z"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = ["--strict-markers", "--strict-config", "--import-mode=importlib", "-ra"]
+markers = [
+    "req(*criteria): criterios de la spec que verifica la prueba, p. ej. fase-1a:2.5 (los lee kspec trace)",
+    "integration: necesita PostgreSQL real",
+]
+
+[tool.coverage.run]
+source = ["src/domain", "src/application"]
+branch = true
+
+[tool.coverage.report]
+# NFR-1: cobertura mínima en la lógica de negocio. Se aplica con `pytest --cov`.
+fail_under = 80
+show_missing = true
+
+[tool.ruff]
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "S", "ASYNC", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S603"]  # assert y subprocess son normales en las pruebas
+
+[tool.mypy]
+strict = true
+python_version = "3.13"
+files = ["src", "tests"]
+mypy_path = "."
+explicit_package_bases = true
+plugins = ["pydantic.mypy"]
+
+[tool.importlinter]
+root_package = "src"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+# api e infrastructure no se importan entre sí; ambas dependen de application y esta de domain.
+name = "Capas de la arquitectura limpia"
+type = "layers"
+layers = [
+    "src.api | src.infrastructure",
+    "src.application",
+    "src.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "api no importa domain"
+type = "forbidden"
+source_modules = ["src.api"]
+forbidden_modules = ["src.domain"]
+# api -> application -> domain es legítimo; lo prohibido es el import directo.
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+# domain solo usa la biblioteca estándar: ningún framework ni SDK.
+name = "domain solo usa la biblioteca estándar"
+type = "forbidden"
+source_modules = ["src.domain"]
+forbidden_modules = [
+    "fastapi",
+    "starlette",
+    "pydantic",
+    "pydantic_settings",
+    "sqlalchemy",
+    "asyncpg",
+    "alembic",
+    "boto3",
+    "botocore",
+    "jwt",
+    "uvicorn",
+]
+
+[[tool.importlinter.contracts]]
+name = "application no depende de frameworks ni SDK"
+type = "forbidden"
+source_modules = ["src.application"]
+forbidden_modules = [
+    "fastapi",
+    "starlette",
+    "sqlalchemy",
+    "asyncpg",
+    "alembic",
+    "boto3",
+    "botocore",
+]
