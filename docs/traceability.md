@@ -16,7 +16,7 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 
 ## fase-1a-infraestructura-y-auth
 
-[Requisitos](../.kiro/specs/fase-1a-infraestructura-y-auth/requirements.md) · [Diseño](../.kiro/specs/fase-1a-infraestructura-y-auth/design.md) · [Tareas](../.kiro/specs/fase-1a-infraestructura-y-auth/tasks.md) · 0/45 criterios verificados (0 %) · en curso · tareas 1/33
+[Requisitos](../.kiro/specs/fase-1a-infraestructura-y-auth/requirements.md) · [Diseño](../.kiro/specs/fase-1a-infraestructura-y-auth/design.md) · [Tareas](../.kiro/specs/fase-1a-infraestructura-y-auth/tasks.md) · 0/45 criterios verificados (0 %) · en curso · tareas 2/33
 
 | Requisito | Criterio | Componentes | Decisiones | Tareas | Pruebas | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -41,7 +41,7 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 | 4 | 4.5 | Módulo `identity`, autorizador JWT del módulo `api` | D11, D12, ADR 0003, T-7 | 18 ○, 23 ○, 24 ○ | — | ❌ |
 | **5** · Red y base de datos en AWS | 5.1 | Módulos `network` y `database` | D13, ADR 0002, ADR 0004 | 16 ○, 24 ○ | — | ❌ |
 | 5 | 5.2 | Módulos `network` y `database` | D13, ADR 0002, ADR 0004 | 16 ○ | — | ❌ |
-| 5 | 5.3 | `infrastructure.db.engine`, `scripts/sql/bootstrap.sql`, `scripts/db_bootstrap.py` | D3, D8 | 2 ○, 9 ○, 10 ○, 10.1 ○ | — | ❌ |
+| 5 | 5.3 | `infrastructure.db.engine`, `scripts/sql/bootstrap.sql`, `scripts/db_bootstrap.py` | D3, D8 | 2 ✓, 9 ○, 10 ○, 10.1 ○ | — | ❌ |
 | 5 | 5.4 | `infrastructure.db.engine`, `SqlDatabaseProbe` | D8, ADR 0004 | 4 ○, 9 ○, 23 ○ | — | ❌ |
 | 5 | 5.5 | Módulos `network` y `database` | D13, ADR 0002, ADR 0004 | 16 ○ | — | ❌ |
 | **6** · Exposición de la API y del sitio | 6.1 | Módulos `api` y `site`, `bootstrap` (ECR) | D13, ADR 0004, ADR 0005 | 15 ○, 18 ○ | — | ❌ |
@@ -52,7 +52,7 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 | **7** · Integración y despliegue continuo | 7.1 | `.github/workflows/ci.yml`, `.github/rulesets/main.json`, `backend/tools/export_openapi.py` | D15 | 10 ○, 11 ○, 21 ○ | — | ❌ |
 | 7 | 7.2 | Módulo `bootstrap` (OIDC), `.github/workflows/deploy.yml` | D1, D4, G-2 | 3 ○, 15 ○, 22 ○ | — | ❌ |
 | 7 | 7.3 | Módulo `bootstrap` (OIDC), `.github/workflows/deploy.yml` | D1, D4, G-2 | 22 ○, 23 ○ | — | ❌ |
-| 7 | 7.4 | `scripts/deploy.py`, `main.create_migrator_app`, `infrastructure.db.migrations`, `scripts/db_bootstrap.py`, `scripts/smoke_test.py` | D2, D3, D5, D7 | 1 ✓, 2 ○, 10 ○, 14 ○, 14.1 ○, 22 ○ | — | ❌ |
+| 7 | 7.4 | `scripts/deploy.py`, `main.create_migrator_app`, `infrastructure.db.migrations`, `scripts/db_bootstrap.py`, `scripts/smoke_test.py` | D2, D3, D5, D7 | 1 ✓, 2 ✓, 10 ○, 14 ○, 14.1 ○, 22 ○ | — | ❌ |
 | 7 | 7.5 | `scripts/deploy.py`, `main.create_migrator_app`, `infrastructure.db.migrations`, `scripts/db_bootstrap.py`, `scripts/smoke_test.py` | D2, D3, D5, D7 | 14 ○, 14.1 ○, 22 ○, 24 ○ | — | ❌ |
 | **8** · Infraestructura como código, coste y operación | 8.1 | Módulo `bootstrap`, `default_tags` del proveedor | D1 | 15 ○ | — | ❌ |
 | 8 | 8.2 | Módulo `bootstrap`, `default_tags` del proveedor | D1 | 15 ○ | — | ❌ |

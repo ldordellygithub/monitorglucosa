@@ -143,6 +143,7 @@ Detalle, motivos y comandos en [git.md](git.md) y `docs/guia-de-desarrollo.md`.
 | API Gateway HTTP API y Lambda en VPC sin NAT; configuración por variables de entorno | `T-10`, `T-11` · [ADR 0004](../../docs/adr/0004-api-network-without-nat.md) |
 | Docker Compose en local y CI; imagen de la API en ECR | [ADR 0005](../../docs/adr/0005-containerized-local-environment.md) |
 | Migraciones con una Lambda `migrator` dentro de la VPC, misma imagen que la API | [ADR 0006](../../docs/adr/0006-database-migrations-with-an-in-vpc-migrator-lambda.md) |
+| Roles de base de datos con un bootstrap SQL idempotente por RDS Data API desde el pipeline | [ADR 0007](../../docs/adr/0007-idempotent-sql-bootstrap-through-rds-data-api.md) |
 | Fase 5 solo informativa, sin diagnóstico, tratamiento ni dosis | `P-5` · [product.md](product.md#decisiones-abiertas) |
 | Estrategia Git y GitHub: GitHub Flow, rebase, repo público, `prod` con aprobación manual | [git.md](git.md) |
 | Clean Architecture, composition root en `main.py`, idempotencia por `UNIQUE` | Este documento: [Regla de dependencias](#regla-de-dependencias) y [Convenciones de API](#convenciones-de-api) |

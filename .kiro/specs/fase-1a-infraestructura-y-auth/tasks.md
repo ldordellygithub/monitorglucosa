@@ -13,7 +13,7 @@ runbook del diseño, no son tareas de código.
     consecuencias del diseño; estado Aceptado; añadirlo al índice de decisiones de `structure.md` y regenerar las copias
     con `kspec steering-sync --target cursor` y `--target claude`.
   - _Requirements: 7.4_
-- [ ] 2. Registrar el ADR 0007: bootstrap SQL idempotente por RDS Data API (D3)
+- [x] 2. Registrar el ADR 0007: bootstrap SQL idempotente por RDS Data API (D3)
   - Incluir la verificación bloqueante de que Data API acepta el secreto gestionado por RDS y la precisión del alcance
     del ADR 0004.
   - _Requirements: 5.3, 7.4_
