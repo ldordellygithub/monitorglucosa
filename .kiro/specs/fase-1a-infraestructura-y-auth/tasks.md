@@ -17,7 +17,7 @@ runbook del diseño, no son tareas de código.
   - Incluir la verificación bloqueante de que Data API acepta el secreto gestionado por RDS y la precisión del alcance
     del ADR 0004.
   - _Requirements: 5.3, 7.4_
-- [ ] 3. Registrar el ADR 0008: rol de despliegue con *permissions boundary* y pipeline público sin fugas (D4)
+- [x] 3. Registrar el ADR 0008: rol de despliegue con *permissions boundary* y pipeline público sin fugas (D4)
   - Incluir la lista de excepciones de NFR-4 y las medidas contra la exposición en los logs públicos de Actions.
   - _Requirements: 7.2, NFR-4, NFR-5_
 - [ ] 4. Registrar el ADR 0009: reanudación de Aurora con 503 reintentable dentro del límite de 30 s (D7)

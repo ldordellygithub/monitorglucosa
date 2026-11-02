@@ -16,7 +16,7 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 
 ## fase-1a-infraestructura-y-auth
 
-[Requisitos](../.kiro/specs/fase-1a-infraestructura-y-auth/requirements.md) · [Diseño](../.kiro/specs/fase-1a-infraestructura-y-auth/design.md) · [Tareas](../.kiro/specs/fase-1a-infraestructura-y-auth/tasks.md) · 0/45 criterios verificados (0 %) · en curso · tareas 2/33
+[Requisitos](../.kiro/specs/fase-1a-infraestructura-y-auth/requirements.md) · [Diseño](../.kiro/specs/fase-1a-infraestructura-y-auth/design.md) · [Tareas](../.kiro/specs/fase-1a-infraestructura-y-auth/tasks.md) · 0/45 criterios verificados (0 %) · en curso · tareas 3/33
 
 | Requisito | Criterio | Componentes | Decisiones | Tareas | Pruebas | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -50,7 +50,7 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 | 6 | 6.4 | Módulos `api` y `site`, `bootstrap` (ECR) | D13, ADR 0004, ADR 0005 | 18 ○ | — | ❌ |
 | 6 | 6.5 | Módulos `api` y `site`, `bootstrap` (ECR) | D13, ADR 0004, ADR 0005 | 18 ○ | — | ❌ |
 | **7** · Integración y despliegue continuo | 7.1 | `.github/workflows/ci.yml`, `.github/rulesets/main.json`, `backend/tools/export_openapi.py` | D15 | 10 ○, 11 ○, 21 ○ | — | ❌ |
-| 7 | 7.2 | Módulo `bootstrap` (OIDC), `.github/workflows/deploy.yml` | D1, D4, G-2 | 3 ○, 15 ○, 22 ○ | — | ❌ |
+| 7 | 7.2 | Módulo `bootstrap` (OIDC), `.github/workflows/deploy.yml` | D1, D4, G-2 | 3 ✓, 15 ○, 22 ○ | — | ❌ |
 | 7 | 7.3 | Módulo `bootstrap` (OIDC), `.github/workflows/deploy.yml` | D1, D4, G-2 | 22 ○, 23 ○ | — | ❌ |
 | 7 | 7.4 | `scripts/deploy.py`, `main.create_migrator_app`, `infrastructure.db.migrations`, `scripts/db_bootstrap.py`, `scripts/smoke_test.py` | D2, D3, D5, D7 | 1 ✓, 2 ✓, 10 ○, 14 ○, 14.1 ○, 22 ○ | — | ❌ |
 | 7 | 7.5 | `scripts/deploy.py`, `main.create_migrator_app`, `infrastructure.db.migrations`, `scripts/db_bootstrap.py`, `scripts/smoke_test.py` | D2, D3, D5, D7 | 14 ○, 14.1 ○, 22 ○, 24 ○ | — | ❌ |
@@ -62,8 +62,8 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 | **NFR** · No funcionales | NFR-1 | Transversal (pytest-cov) | — | 5 ○ | — | ❌ |
 | NFR | NFR-2 | `infrastructure.db.engine`, Lambda `api`, `scripts/smoke_test.py` | D7, D8 | 4 ○, 9 ○, 14 ○, 23 ○ | — | ❌ |
 | NFR | NFR-3 | Módulo `operations`, estimación de coste | D13, D14, T-3 | 19 ○, 23 ○ | — | ❌ |
-| NFR | NFR-4 | Políticas IAM de los módulos, checkov | D4 | 3 ○, 21 ○ | — | ❌ |
-| NFR | NFR-5 | `JsonFormatter`, `RequestLogMiddleware`, `.dockerignore`, `deploy.yml`, `deploy.py` | D3, D4, D11 | 3 ○, 7 ○, 7.2 ○, 21 ○ | — | ❌ |
+| NFR | NFR-4 | Políticas IAM de los módulos, checkov | D4 | 3 ✓, 21 ○ | — | ❌ |
+| NFR | NFR-5 | `JsonFormatter`, `RequestLogMiddleware`, `.dockerignore`, `deploy.yml`, `deploy.py` | D3, D4, D11 | 3 ✓, 7 ○, 7.2 ○, 21 ○ | — | ❌ |
 | NFR | NFR-6 | `openapi.yaml`, `api.openapi.build_openapi`, `backend/tools/export_openapi.py`, `docs/api/README.md`, pruebas de contrato | D16, D17 | 11 ○, 11.1 ○, 23 ○ | — | ❌ |
 
 ## Pruebas huérfanas
