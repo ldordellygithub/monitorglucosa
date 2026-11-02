@@ -21,7 +21,13 @@ CONTRACT_NAMES = [
         "tool"
     ]["importlinter"]["contracts"]
 ]
-LAYERS, API_NOT_DOMAIN, DOMAIN_STDLIB, APPLICATION_NO_FRAMEWORKS = CONTRACT_NAMES
+(
+    LAYERS,
+    API_NOT_DOMAIN,
+    DOMAIN_STDLIB,
+    APPLICATION_NO_FRAMEWORKS,
+    ONLY_MAIN_WIRES,
+) = CONTRACT_NAMES
 
 
 def copy_project(destination: Path) -> Path:
@@ -84,6 +90,23 @@ def test_lint_imports_cadena_api_application_domain_es_legitima(
 
 
 @pytest.mark.req("fase-1a:2.5")
+def test_lint_imports_main_puede_importar_todas_las_capas_y_la_configuracion(
+    tmp_path: Path,
+) -> None:
+    project = copy_project(tmp_path)
+    main = project / "src" / "main.py"
+    wiring = "".join(
+        f"import src.{module}\n"
+        for module in ("api", "application", "domain", "infrastructure", "config")
+    )
+    main.write_text(main.read_text("utf-8") + wiring, "utf-8")
+
+    result = lint_imports(project)
+
+    assert result.returncode == 0, result.stdout
+
+
+@pytest.mark.req("fase-1a:2.5")
 @pytest.mark.parametrize(
     ("layer", "imported", "contract"),
     [
@@ -113,6 +136,13 @@ def test_lint_imports_cadena_api_application_domain_es_legitima(
         pytest.param(
             "application", "boto3", APPLICATION_NO_FRAMEWORKS, id="application-boto3"
         ),
+        pytest.param("domain", "src.config", ONLY_MAIN_WIRES, id="domain-config"),
+        pytest.param(
+            "infrastructure", "src.config", ONLY_MAIN_WIRES, id="infrastructure-config"
+        ),
+        pytest.param("api", "src.config", ONLY_MAIN_WIRES, id="api-config"),
+        pytest.param("application", "src.main", ONLY_MAIN_WIRES, id="application-main"),
+        pytest.param("api", "src.main", ONLY_MAIN_WIRES, id="api-main"),
     ],
 )
 def test_lint_imports_importacion_prohibida_rompe_el_contrato(

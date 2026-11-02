@@ -62,7 +62,7 @@ runbook del diseño, no son tareas de código.
     - _Property: 3_
     - _Requirements: 3.3_
 - [ ] 9. Implementar `/health`, `/health/ready` y el acceso async a PostgreSQL
-  - `create_engine` con asyncpg y `NullPool` (contraseña en local, token IAM firmado por boto3 en `prod`, TLS
+  - `DatabaseConfig` (clase de `infrastructure` que construye `main.py` desde `Settings`) y `create_engine` con asyncpg y `NullPool` (contraseña en local, token IAM firmado por boto3 en `prod`, TLS
     `verify-full` con el bundle de CA de RDS, `connect_timeout` de 20 s), `SqlDatabaseProbe`, `CheckReadiness` y el 503
     `DATABASE_UNAVAILABLE` con `Retry-After: 5`.
   - Pruebas de integración con PostgreSQL 16 real: `/health` responde 200 con la base de datos inaccesible;
@@ -94,7 +94,7 @@ runbook del diseño, no son tareas de código.
     `.env` ficticio no entra en la imagen; `GET /api/v1/me` con un token del emisor → 200 y con uno alterado → 401.
   - _Requirements: 1.1, 1.2, 1.3, 3.3_
 - [ ] 13. Checkpoint: ejecutar las pruebas del backend, `ruff`, `mypy`, `lint-imports` y `kspec trace`
-  - Cobertura ≥ 80 % en `domain` y `application`; matriz generada sin pruebas huérfanas.
+  - Cobertura ≥ 80 % en `domain` y `application` con `pytest --cov` (el umbral solo actúa con esa opción); matriz generada sin pruebas huérfanas.
 
 ## Despliegue e infraestructura
 
@@ -131,7 +131,7 @@ runbook del diseño, no son tareas de código.
 ## Pipeline y documentación
 
 - [ ] 21. Crear `ci.yml` y añadir el check `ci` al ruleset
-  - Jobs `changes`, `backend`, `compose`, `infra` y el resumen `ci`; acciones fijadas por SHA; semgrep, gitleaks,
+  - Jobs `changes`, `backend` (con `pytest --cov`), `compose`, `infra` y el resumen `ci`; acciones fijadas por SHA; semgrep, gitleaks,
     dependency review, comparación de `openapi.json` y checkov; editar `.github/rulesets/main.json` (se aplica con
     `kspec github apply`, con confirmación del propietario).
   - _Requirements: 7.1, NFR-4, NFR-5_

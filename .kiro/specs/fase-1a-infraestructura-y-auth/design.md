@@ -216,7 +216,7 @@ con su vista en el mismo PR.
 | Componente | Responsabilidad | Interfaz | Depende de |
 | --- | --- | --- | --- |
 | `config.Settings` | Leer y validar la configuración; rechazar combinaciones prohibidas en `prod` | `Settings()` (pydantic-settings) | Variables de entorno |
-| `main.create_app()` | Composition root de la API: elige los adaptadores por `ENVIRONMENT`; registra routers, middleware y manejadores; configura `logging` con `JsonFormatter` | `uvicorn src.main:create_app --factory` | Todas las capas |
+| `main.create_app()` | Composition root de la API: elige los adaptadores por `ENVIRONMENT`; construye la configuración de cada adaptador (p. ej. `DatabaseConfig`) a partir de `Settings`, que ninguna capa interior importa; registra routers, middleware y manejadores; configura `logging` con `JsonFormatter` | `uvicorn src.main:create_app --factory` | Todas las capas |
 | `main.create_migrator_app()` | Composition root del `migrator` | `POST /events` → `MigrationResult`; `GET /` → 200 (arranque de LWA) | `infrastructure.db.migrations` |
 | `domain/` | Paquete vacío en esta spec; activa desde ya los contratos de import-linter | — | — |
 | `application.identity` | DTO `Identity(subject: str)` y error `UnauthenticatedError` | `@dataclass(frozen=True)` | — |
@@ -225,10 +225,10 @@ con su vista en el mismo PR.
 | `application.readiness.CheckReadiness` | Caso de uso de `/health/ready` | `async execute() -> None` | `DatabaseProbe` |
 | `infrastructure.auth.ApiGatewayClaimsAuthenticator` | Leer `requestContext.authorizer.jwt.claims`; exigir `sub` no vacío y `token_use = access` | `Authenticator` | Biblioteca estándar (`json`) |
 | `infrastructure.auth.LocalJwksAuthenticator` | Validar RS256, `iss`, `client_id` ∈ lista, `exp` (sin margen) y `token_use = access` contra la JWKS de pruebas | `Authenticator` | PyJWT (`PyJWKClient`, caché de claves) |
-| `infrastructure.db.engine` | Crear un motor async por petición con `NullPool`. En `prod`, el token IAM lo firma `boto3` (`generate_db_auth_token`); TLS `verify-full` con el bundle de CA de RDS; `connect_timeout` = 20 s | `create_engine(settings) -> AsyncEngine` | SQLAlchemy 2.x, asyncpg, boto3 |
+| `infrastructure.db.engine` | Crear un motor async por petición con `NullPool`. En `prod`, el token IAM lo firma `boto3` (`generate_db_auth_token`); TLS `verify-full` con el bundle de CA de RDS; `connect_timeout` = 20 s. `DatabaseConfig` es una clase congelada de esta capa (host, puerto, base, usuario, timeout y contraseña opcional; sin contraseña se usa el token IAM) que construye `main.py` desde `Settings` | `create_engine(config: DatabaseConfig) -> AsyncEngine` | SQLAlchemy 2.x, asyncpg, boto3 |
 | `infrastructure.db.metadata` | `MetaData(schema="app", naming_convention=…)` con la convención de `structure.md` | Objeto `metadata` | SQLAlchemy |
 | `infrastructure.db.SqlDatabaseProbe` | `SELECT 1` con su propia conexión, cerrada al terminar; convierte el timeout en `DatabaseUnavailableError` | `DatabaseProbe` | `engine` |
-| `infrastructure.db.migrations` | Alembic async (`env.py`, `version_table_schema = "app"`), la revisión base vacía y `upgrade_to_head()` | `async upgrade_to_head(settings) -> str` | Alembic, `engine`, `metadata` |
+| `infrastructure.db.migrations` | Alembic async (`env.py`, `version_table_schema = "app"`), la revisión base vacía y `upgrade_to_head()` | `async upgrade_to_head(config: DatabaseConfig) -> str` | Alembic, `engine`, `metadata` |
 | `infrastructure.observability.JsonFormatter` | Serializar solo los campos de la lista blanca | `logging.Formatter` | Biblioteca estándar |
 | `api.middleware.RequestLogMiddleware` | Fijar `request_id` (de `requestContext.requestId` o UUID4; ignora el que mande el cliente), añadir `x-request-id` y escribir una línea por petición con la ruta plantilla, nunca la URL real | Middleware ASGI | `logging` |
 | `api.errors` | `ErrorBody`/`ErrorDetail`; manejadores de `RequestValidationError`, `UnauthenticatedError`, `DatabaseUnavailableError`, 404, 405 y `Exception`; traducción de tipos de error de Pydantic a problemas en español | `register_error_handlers(app)` | `application` |
@@ -393,7 +393,7 @@ Ninguna variable contiene secretos (`T-11`). Lambda las cifra en reposo con su c
 Contenido de cada job de `ci.yml`:
 
 - **`backend`:** `uv sync --locked`; `ruff check`, `ruff format --check`, `mypy --strict` y `lint-imports` en
-  `backend/` y `dev/jwt-issuer/`; pytest unitario y de integración con el servicio `postgres:16`; cobertura;
+  `backend/` y `dev/jwt-issuer/`; pytest unitario y de integración con el servicio `postgres:16` y `--cov` (el umbral del 80 % solo actúa con esa opción);
   `export_openapi.py --check` (`openapi.json` y `docs/api/README.md` al día); `openapi-spec-validator` sobre el
   generado y los `openapi.yaml` de las specs; pruebas de contrato (conformidad y Schemathesis, D16); semgrep (OWASP) y
   gitleaks; `actions/dependency-review-action` en los PR.
@@ -409,7 +409,7 @@ Todas las acciones van fijadas por SHA (U-6).
 | `scripts/deploy.py` | Orquestar la secuencia de despliegue en dos fases y la vuelta atrás. Todas las llamadas a `terraform` y a `aws` pasan por un `Runner` inyectable para poder probarlo con dobles. Enmascara el ID de cuenta y solo escribe el resumen del plan |
 | `scripts/db_bootstrap.py` | `rds-data execute-statement` con `scripts/sql/bootstrap.sql`, `continueAfterTimeout = true`; reintenta `DatabaseResumingException` y `DatabaseUnavailableException` con espera exponencial hasta 120 s |
 | `scripts/sql/bootstrap.sql` | Un único bloque `DO $$ … $$`, idempotente: crea `mg_migrator` y `mg_api` con `rds_iam`; el esquema `app` (dueño `mg_migrator`); `USAGE` y privilegios por defecto de DML para `mg_api`; `search_path = app`; sin `CREATE` en `public` |
-| `scripts/smoke_test.py` | `/health/ready` firmado con SigV4 (botocore + httpx), reintentos hasta 120 s respetando `Retry-After`, timeout de 35 s por petición; y `GET /api/v1/me` sin token → 401. Solo escribe códigos de estado y tiempos |
+| `scripts/smoke_test.py` | `/health/ready` firmado con SigV4 (botocore + httpx), reintentos hasta 120 s respetando `Retry-After`, timeout de 40 s por petición (7.5); y `GET /api/v1/me` sin token → 401. Solo escribe códigos de estado y tiempos |
 
 ### Versiones fijadas
 
@@ -435,8 +435,8 @@ documentación de la versión 6.69.1.
 | Archivo | Cambio |
 | --- | --- |
 | `.github/rulesets/main.json` | Añadir `ci` a `required_status_checks` (se aplica con `kspec github apply`, con confirmación) |
-| `.pre-commit-config.yaml` | Hooks locales de `backend/` en pre-push: `mypy` y `pytest -m "not integration"`, donde lo anticipa el comentario del archivo |
-| `.gitignore` | `.terraform/`, `*.tfstate*`, `*.tfplan`, `backend_override.tf`, `.env*` salvo `.env.example` |
+| `.pre-commit-config.yaml` | Hooks locales de `backend/` en pre-push: `mypy` y `pytest -m "not integration"`, donde lo anticipa el comentario del archivo; y un hook de pre-commit que regenera `docs/traceability.md` |
+| `.gitignore` | `.terraform/`, `*.tfstate*`, `*.tfplan`, `backend_override.tf`, `.env*` salvo `.env.example`, `.coverage` y `htmlcov/` |
 | `docs/guia-de-desarrollo.md` | Runbook del primer despliegue; los comandos «(previsto)» pasan a reales; cómo abrir Swagger UI en local |
 | `docs/api/README.md` (nuevo, generado) | Referencia de la API desde `backend/openapi.json`: operaciones, seguridad, esquemas, catálogo de errores, contrato de reintento e índice de los `openapi.yaml` por spec |
 | `.kiro/steering/tech.md` | «Comandos habituales» con los comandos reales; NFR de latencia («≤ 60 s sumando reintentos; cada petición < 30 s»); el flujo de despliegue con las migraciones. Con tu aprobación y `kspec steering-sync` |
@@ -524,7 +524,7 @@ vacíos) existe para probar el mecanismo de punta a punta (7.1 y 7.4).
 | Token sin ámbito `openid` (por ejemplo, un ID token) | Autorizador JWT (`authorization_scopes`) | Rechazo de API Gateway (403 esperado; se registra el observado en `manual-checks.md`) | No |
 | Firma SigV4 ausente o inválida en `/health/ready` | Autorización IAM | 403 de API Gateway | No |
 | Throttling superado | API Gateway | 429 de API Gateway | El cliente, con backoff |
-| Aurora en pausa o reanudando | `connect_timeout` de 20 s o rechazo de conexión | 503 `DATABASE_UNAVAILABLE` + `Retry-After: 5` | Sí: clientes y prueba de humo, hasta 60 s en total |
+| Aurora en pausa o reanudando | `connect_timeout` de 20 s o rechazo de conexión | 503 `DATABASE_UNAVAILABLE` + `Retry-After: 5` | Sí: los clientes hasta 60 s en total (NFR-2); la prueba de humo, hasta 120 s |
 | La Lambda supera los 30 s | API Gateway | 5xx de API Gateway (503 según la comunidad; AWS no lo documenta); cuenta en la alarma de 5xx | Como el anterior |
 | Lambda `Inactive` tras semanas sin uso | Lambda rechaza la primera invocación | `api`: 5xx que el cliente reintenta; `migrator`: `deploy.py` espera con `function-active-v2` antes de invocar | Sí, una vez |
 | Excepción no controlada | Manejador de `Exception` | 500 `INTERNAL_ERROR`; traza solo en el log, sin datos de la petición | No |
@@ -694,8 +694,8 @@ las specs. Las pruebas usan solo datos sintéticos.
 - **Contexto:** Aurora tarda ~15 s en reanudar, o 30 s o más tras 24 h en pausa, y HTTP API corta a los 30 s. La frase
   de `tech.md` «la primera petición puede tardar hasta ~35 s» no se puede cumplir con una sola petición.
 - **Decisión:** conexión con timeout de 20 s. Si se agota, la API responde 503 `DATABASE_UNAVAILABLE` con
-  `Retry-After: 5`; la Lambda tiene un timeout de 30 s. Clientes y prueba de humo reintentan hasta 60 s en total
-  (NFR-2, reformulado el 2026-11-01).
+  `Retry-After: 5`; la Lambda tiene un timeout de 30 s. Los clientes reintentan hasta 60 s en total
+  (NFR-2, reformulado el 2026-11-01); la prueba de humo del despliegue, con más margen, hasta 120 s (D5).
 - **Alternativas descartadas:** una REST API con timeout ampliado (vuelve a abrir `T-10`); mantener Aurora despierta
   (≈ US$91/mes, contradice `T-3`).
 - **Consecuencias:** el colector y la web heredan este contrato de reintento. Se corrige la frase de `tech.md`.

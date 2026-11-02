@@ -40,6 +40,7 @@ No verificado: el código exacto que devuelve HTTP API cuando la integración su
 
 - El colector y la web heredan este contrato: tratan el 503 como «despertando la base de datos» y reintentan en vez de fallar. Cada spec lo implementa en su cliente.
 - Si Aurora tarda más de ~60 s en reanudar, el cliente interactivo falla; la prueba de humo tolera hasta 120 s. El tiempo real de reanudación tras más de 24 h se mide y se anota en `manual-checks.md` (NFR-2).
+- Todo fallo al conectar con Aurora responde 503, también uno de autenticación (por ejemplo, falta `rds-db:connect`). Se consideró separar las causas y el 2026-11-02 se decidió no hacerlo, por simplicidad. AWS indica no reintentar los fallos de autenticación, así que ese error se reintentaría en vano: los clientes tardan hasta 60 s en darse por vencidos y la prueba de humo del despliegue, 120 s. La respuesta no distingue el caso de la reanudación; la señal es que la prueba de humo falle.
 - Que API Gateway entregue la cabecera `Retry-After` de la API lo ejercita la prueba de humo, que la respeta.
 - Riesgo de ruido en las alarmas: AWS define la métrica `5xx` de HTTP API solo como «errores del lado del servidor» y no precisa si cuenta los 503 que devuelve la propia Lambda. Si los cuenta, un 503 de reanudación tras una pausa larga avisaría por correo sin ser un fallo. Se observa al probar la alarma (8.4) y, si ocurre, se ajusta la alarma en la spec de operación.
 - Se prueba con:

@@ -1,5 +1,6 @@
 # Generado por /precommit-setup (kit estilo Kiro). Equivale a los hooks de Kiro sobre el stage:
-# al hacer commit revisa secretos, formato y specs; al hacer push, mypy y las pruebas del backend.
+# al hacer commit revisa secretos, formato y specs y mantiene al día la matriz de trazabilidad;
+# al hacer push, mypy y las pruebas del backend.
 # Instalar en el repo: pre-commit install --hook-type pre-commit --hook-type commit-msg --hook-type pre-push
 # Actualizar versiones: pre-commit autoupdate (revisa el diff antes de aceptarlo)
 default_install_hook_types: [pre-commit, commit-msg, pre-push]
@@ -53,6 +54,12 @@ repos:
         language: system
         pass_filenames: false
         files: ^\.kiro/specs/
+      - id: kiro-trace
+        name: matriz de trazabilidad al día (docs/traceability.md)
+        entry: python3 .kiro/tools/kiro_trace.py generate .
+        language: system
+        pass_filenames: false
+        files: ^(\.kiro/specs/|backend/tests/|docs/traceability\.md$)
       - id: backend-mypy
         name: mypy estricto (backend)
         entry: bash -c 'cd backend && uv run mypy'

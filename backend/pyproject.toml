@@ -119,3 +119,16 @@ forbidden_modules = [
     "boto3",
     "botocore",
 ]
+
+[[tool.importlinter.contracts]]
+# main.py es el único punto que conecta las capas y el único que lee config.py:
+# las capas reciben valores o clases propias, nunca Settings.
+name = "Solo main.py conecta las capas y lee la configuración"
+type = "forbidden"
+source_modules = [
+    "src.domain",
+    "src.application",
+    "src.infrastructure",
+    "src.api",
+]
+forbidden_modules = ["src.main", "src.config"]

@@ -36,8 +36,10 @@ El proyecto debe funcionar igual en el equipo del autor, en cualquier otra máqu
 - Una imagen de contenedor puede arrancar en frío más despacio que un .zip. Se mide contra la NFR de latencia.
 - El `.dockerignore` excluye `.env`, secretos y datos. Ninguna imagen contiene credenciales.
 - Docker **no** verifica lo que solo existe en AWS: el autorizador JWT, la autenticación IAM con Aurora, la pausa y reanudación, la VPC sin NAT, el throttling ni el coste. Lo cubre la prueba de humo tras cada despliegue, descrita en `tech.md`: `/health/ready` firmado con IAM y un 401 sin token, con vuelta al digest anterior si falla.
-- Verificado: Lambda Web Adapter entrega el contexto de API Gateway en la cabecera `x-amzn-request-context`. Con HTTP API y autorizador JWT, los claims están en `requestContext.authorizer.jwt.claims`, todos como texto. Si la cabecera falta en `prod`, el adaptador rechaza la petición.
+- Verificado: Lambda Web Adapter entrega el contexto de API Gateway en la cabecera `x-amzn-request-context`. Con HTTP API y autorizador JWT, los claims están en `requestContext.authorizer.jwt.claims`, todos como texto. El adaptador siempre escribe esa cabecera y reemplaza la que envíe el cliente (`HeaderMap::insert`, en su código fuente). Si falta o no trae un `sub`, quien rechaza la petición es la API (criterio 3.2 de `fase-1a`), no el adaptador.
 
 ## Referencias
 
 - [Lambda Web Adapter: contexto de la petición y de Lambda](https://aws.github.io/aws-lambda-web-adapter/features/request-context.html)
+- [Lambda Web Adapter: código fuente (`src/lib.rs`)](https://github.com/aws/aws-lambda-web-adapter/blob/main/src/lib.rs)
+- [Formato 2.0 del evento de HTTP API: `requestContext.authorizer.jwt.claims`](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-lambda.html)
