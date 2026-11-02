@@ -1,0 +1,373 @@
+# Contrato de la API que introduce la spec fase-1a-infraestructura-y-auth (diseño, contract-first).
+# La implementación genera backend/openapi.json (contrato de referencia, structure.md) y una prueba de CI
+# comprueba que es conforme con este archivo y con los de las demás specs. No incluye datos reales.
+openapi: 3.1.0
+info:
+  title: monitorglucosa API
+  version: 0.1.0
+  summary: API personal de seguimiento de glucemia. Fase 1a, plataforma y autenticación.
+  description: |
+    API de un solo usuario (el propietario). Esta versión no maneja lecturas de glucemia: expone las
+    comprobaciones de salud y la identidad autenticada, sobre las que se construyen las specs siguientes.
+
+    ## Autenticación
+    - Las rutas de `/api/v1` exigen un **access token de Amazon Cognito** en `Authorization: Bearer <token>`.
+      API Gateway valida firma, emisor, `client_id` (clientes `web` y `collector`), expiración y el ámbito
+      `openid`, y la API exige además `token_use = access`: un ID token nunca sirve de credencial.
+    - `GET /health/ready` exige una firma **AWS SigV4** (servicio `execute-api`). Solo la usa la prueba de humo.
+    - `GET /health` es pública y nunca toca la base de datos.
+
+    ## Errores
+    - Lo que responde la API usa siempre el cuerpo `ErrorBody` (`code`, `message`, `details`). Los códigos son
+      estables y nunca incluyen el valor recibido, trazas ni detalles internos.
+    - Lo que responde **API Gateway sin invocar la API** (rechazo del autorizador o de la firma, throttling,
+      fallo o timeout de la integración) usa el cuerpo `ApiGatewayMessage`. Los clientes lo distinguen por el
+      código HTTP y por la ausencia de `x-request-id`.
+    - Una ruta inexistente dentro de `/api/v1` con token válido responde 404 `NOT_FOUND`, y un método no
+      soportado responde 405 `METHOD_NOT_ALLOWED`, ambos con `ErrorBody`. Sin token, API Gateway responde
+      antes con 401. Fuera de `/health`, `/health/ready` y `/api/v1`, responde API Gateway con 404.
+
+    ## Base de datos en pausa
+    Aurora se pausa tras 300 s sin conexiones. La primera petición que necesita la base de datos puede recibir
+    503 `DATABASE_UNAVAILABLE` con `Retry-After`. El cliente reintenta respetando esa cabecera, durante 60 s
+    como máximo en total. Ninguna petición individual supera los 30 s (límite de API Gateway).
+
+    ## Límites
+    Throttling global de 10 peticiones/s con ráfagas de 20 (429 de API Gateway). CORS solo para el origen de
+    CloudFront del sitio, métodos `GET`, cabeceras `authorization` y `content-type`, sin credenciales.
+
+    ## Convenciones
+    Campos JSON en `snake_case`. Fechas en ISO 8601 con zona horaria (las primeras llegan con la spec de
+    lecturas). Toda respuesta de la API incluye `x-request-id`, que también aparece en los logs.
+servers:
+  - url: https://{apiId}.execute-api.sa-east-1.amazonaws.com
+    description: Producción (AWS sa-east-1). El identificador sale del output `api_endpoint` de Terraform.
+    variables:
+      apiId:
+        default: apiId
+        description: Identificador de la HTTP API (no es un secreto, pero no se versiona).
+  - url: http://localhost:8000
+    description: Entorno local con Docker Compose (emisor JWT de pruebas en lugar de Cognito; sin SigV4).
+tags:
+  - name: salud
+    description: Comprobaciones de disponibilidad de la API y de la base de datos.
+  - name: identidad
+    description: Identidad del usuario autenticado.
+paths:
+  /health:
+    get:
+      tags: [salud]
+      operationId: getHealth
+      summary: Comprobar que la API está viva
+      description: |
+        Responde sin abrir ninguna conexión a la base de datos, así que nunca despierta Aurora. Lambda Web
+        Adapter la usa como comprobación de arranque. Pública.
+      x-requirements: ["2.1", "6.2"]
+      security: []
+      responses:
+        "200":
+          description: La API está viva.
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+              example:
+                status: ok
+        "429":
+          $ref: "#/components/responses/Throttled"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/GatewayUnavailable"
+  /health/ready:
+    get:
+      tags: [salud]
+      operationId: getReadiness
+      summary: Comprobar que la API llega a la base de datos
+      description: |
+        Ejecuta `SELECT 1` con una conexión propia que se cierra al terminar. Si Aurora está en pausa, la
+        petición la despierta. Exige SigV4 en producción; en local no hay autorización.
+      x-requirements: ["2.2", "6.2", "7.5", "NFR-2"]
+      security:
+        - awsSigV4: []
+      responses:
+        "200":
+          description: La base de datos responde.
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessStatus"
+              example:
+                status: ready
+        "403":
+          $ref: "#/components/responses/GatewayForbidden"
+        "429":
+          $ref: "#/components/responses/Throttled"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/DatabaseUnavailable"
+  /api/v1/me:
+    get:
+      tags: [identidad]
+      operationId: getCurrentIdentity
+      summary: Obtener la identidad del usuario autenticado
+      description: |
+        Devuelve solo el identificador estable del usuario (claim `sub` de Cognito). Sirve para comprobar la
+        cadena de autenticación completa: cliente → Cognito → API Gateway → API. No toca la base de datos.
+      x-requirements: ["3.1", "3.2", "3.3", "3.5", "4.5"]
+      security:
+        - cognitoAccessToken: []
+      responses:
+        "200":
+          description: Identidad del usuario autenticado.
+          headers:
+            x-request-id:
+              $ref: "#/components/headers/XRequestId"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+              example:
+                sub: 8f3c2a1e-5b7d-4c9a-9e2f-1a2b3c4d5e6f
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/GatewayForbidden"
+        "429":
+          $ref: "#/components/responses/Throttled"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          $ref: "#/components/responses/GatewayUnavailable"
+components:
+  securitySchemes:
+    cognitoAccessToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Access token de Amazon Cognito (user pool de monitorglucosa, plan Essentials, MFA TOTP obligatorio),
+        obtenido con el flujo de código de autorización y PKCE (S256) por el cliente `web` o `collector`. Dura
+        60 minutos. Debe incluir el ámbito `openid` y `token_use = access`. En local lo emite `dev/jwt-issuer`.
+    awsSigV4:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: |
+        Firma AWS Signature Version 4 para el servicio `execute-api` en `sa-east-1`. Solo el rol de despliegue
+        tiene `execute-api:Invoke` sobre `GET /health/ready`.
+  headers:
+    XRequestId:
+      description: |
+        Identificador de correlación de la petición: el `requestId` de API Gateway en producción, o un UUID4 en
+        local. Se ignora el valor que envíe el cliente. Solo lo llevan las respuestas generadas por la API.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 64
+      example: 0b1f6c52-3a9e-4e0d-8f57-2c4d9a7e1b30
+    RetryAfter:
+      description: Segundos que el cliente debe esperar antes de reintentar.
+      schema:
+        type: integer
+        minimum: 1
+      example: 5
+  schemas:
+    HealthStatus:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          const: ok
+    ReadinessStatus:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          const: ready
+    Me:
+      type: object
+      additionalProperties: false
+      required: [sub]
+      properties:
+        sub:
+          type: string
+          format: uuid
+          description: Identificador estable del usuario en Cognito (claim `sub`). No es un dato de salud.
+    ErrorCode:
+      type: string
+      description: |
+        Código estable en UPPER_SNAKE_CASE. Las specs siguientes añaden códigos (por ejemplo
+        `READING_INVALID`); nunca se reutiliza ni se cambia el significado de uno existente.
+      enum:
+        - VALIDATION_ERROR
+        - UNAUTHENTICATED
+        - NOT_FOUND
+        - METHOD_NOT_ALLOWED
+        - DATABASE_UNAVAILABLE
+        - INTERNAL_ERROR
+    ErrorDetail:
+      type: object
+      additionalProperties: false
+      required: [field, problem]
+      properties:
+        field:
+          type: string
+          description: Ubicación del problema, por ejemplo `query.limit` o `body.value`.
+        problem:
+          type: string
+          description: |
+            Problema en español, sin el valor recibido. Valores actuales: «obligatorio», «tipo no válido»,
+            «longitud no válida», «fuera de rango», «formato no válido» y «valor no válido».
+    ErrorBody:
+      type: object
+      additionalProperties: false
+      required: [code, message, details]
+      properties:
+        code:
+          $ref: "#/components/schemas/ErrorCode"
+        message:
+          type: string
+          description: Mensaje en español para la persona usuaria.
+        details:
+          type: array
+          description: Vacío salvo en los errores de validación.
+          items:
+            $ref: "#/components/schemas/ErrorDetail"
+    ApiGatewayMessage:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+      description: |
+        Cuerpo que genera API Gateway cuando responde sin invocar la API. La API no lo controla: HTTP API no
+        permite personalizarlo (solo las REST API tienen *gateway responses*). El texto exacto puede cambiar;
+        los clientes deciden por el código HTTP.
+  responses:
+    ValidationError:
+      description: |
+        La petición no supera la validación. Ninguna ruta de esta spec recibe parámetros; el contrato aplica a
+        las rutas con cuerpo, query o ruta que añadan las specs siguientes (criterio 2.3).
+      headers:
+        x-request-id:
+          $ref: "#/components/headers/XRequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+          example:
+            code: VALIDATION_ERROR
+            message: La petición no es válida.
+            details:
+              - field: query.limit
+                problem: fuera de rango
+    Unauthenticated:
+      description: |
+        Sin identidad válida. API Gateway rechaza los tokens ausentes, mal firmados, caducados, de otro emisor
+        o de otro cliente (`ApiGatewayMessage`, sin `x-request-id`). La API rechaza los que llegan sin claims o
+        con `token_use` distinto de `access` (`ErrorBody`).
+      content:
+        application/json:
+          schema:
+            anyOf:
+              - $ref: "#/components/schemas/ErrorBody"
+              - $ref: "#/components/schemas/ApiGatewayMessage"
+          examples:
+            api:
+              summary: Rechazo de la API
+              value:
+                code: UNAUTHENTICATED
+                message: Se requiere autenticación.
+                details: []
+            gateway:
+              summary: Rechazo del autorizador JWT (texto orientativo)
+              value:
+                message: Unauthorized
+    GatewayForbidden:
+      description: |
+        API Gateway deniega la petición: falta la firma SigV4 o no es válida, el firmante no tiene
+        `execute-api:Invoke`, o el token no incluye el ámbito `openid` (por ejemplo, un ID token).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiGatewayMessage"
+          example:
+            message: Forbidden
+    Throttled:
+      description: Se superó el throttling global (10 peticiones/s, ráfagas de 20). Reintentar con backoff.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiGatewayMessage"
+          example:
+            message: Too Many Requests
+    InternalError:
+      description: |
+        Error interno. La API responde `INTERNAL_ERROR` sin detalles; si la función falla antes de responder,
+        API Gateway devuelve su propio cuerpo.
+      content:
+        application/json:
+          schema:
+            anyOf:
+              - $ref: "#/components/schemas/ErrorBody"
+              - $ref: "#/components/schemas/ApiGatewayMessage"
+          examples:
+            api:
+              summary: Error controlado por la API
+              value:
+                code: INTERNAL_ERROR
+                message: Error interno.
+                details: []
+            gateway:
+              summary: La función falló antes de responder
+              value:
+                message: Internal Server Error
+    GatewayUnavailable:
+      description: |
+        La integración no respondió a tiempo o no estaba disponible (por ejemplo, la función superó los 30 s o
+        estaba `Inactive` tras semanas sin uso). Reintentar.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiGatewayMessage"
+          example:
+            message: Service Unavailable
+    DatabaseUnavailable:
+      description: |
+        La base de datos no respondió en 20 s, normalmente porque se está despertando (`ErrorBody` con
+        `Retry-After`), o la integración superó el límite de API Gateway (`ApiGatewayMessage`). Reintentar
+        respetando `Retry-After`, hasta 60 s en total.
+      headers:
+        Retry-After:
+          $ref: "#/components/headers/RetryAfter"
+        x-request-id:
+          $ref: "#/components/headers/XRequestId"
+      content:
+        application/json:
+          schema:
+            anyOf:
+              - $ref: "#/components/schemas/ErrorBody"
+              - $ref: "#/components/schemas/ApiGatewayMessage"
+          examples:
+            api:
+              summary: Aurora se está despertando
+              value:
+                code: DATABASE_UNAVAILABLE
+                message: La base de datos se está despertando. Reintenta en unos segundos.
+                details: []
+            gateway:
+              summary: Timeout de la integración
+              value:
+                message: Service Unavailable
