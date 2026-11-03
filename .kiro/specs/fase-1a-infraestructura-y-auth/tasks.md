@@ -40,22 +40,30 @@ runbook del diseño, no son tareas de código.
   - [x] 6.1 Prueba basada en propiedades: la configuración de `prod` es cerrada
     - _Property: 5_
     - _Requirements: 1.4, 3.4_
-- [ ] 7. Implementar logs JSON, identificador de correlación y manejadores de errores
+- [x] 7. Implementar logs JSON, identificador de correlación y manejadores de errores
   - `JsonFormatter` con lista blanca, `RequestLogMiddleware` (ruta plantilla, `x-request-id` propio), `ErrorBody`,
     `ErrorDetail`, traducción de los tipos de error de Pydantic y manejadores de 422, 401, 404, 405, 503 y 500, sin el
     valor recibido.
   - _Requirements: 2.3, 2.4, NFR-5_
-  - [ ] 7.1 Prueba basada en propiedades: los errores no repiten lo recibido
+  - [x] 7.1 Prueba basada en propiedades: los errores no repiten lo recibido
     - _Property: 1_
     - _Requirements: 2.3_
-  - [ ] 7.2 Prueba basada en propiedades: los logs no contienen credenciales ni contenido
+  - [x] 7.2 Prueba basada en propiedades: los logs no contienen credenciales ni contenido
     - _Property: 4_
     - _Requirements: 2.4, NFR-5_
 - [ ] 8. Implementar la autenticación: puerto, dos adaptadores y `GET /api/v1/me`
   - `Identity`, `Authenticator`, `ApiGatewayClaimsAuthenticator`, `LocalJwksAuthenticator` (PyJWT), `current_identity`
     y el router `me`; selección por `ENVIRONMENT` en `create_app`. Ambos exigen `token_use = access`. Prueba de que, con
     `ENVIRONMENT = prod`, `create_app` nunca construye `LocalJwksAuthenticator` (la otra mitad de 3.4; `Settings` ya
-    cubre la configuración).
+    cubre la configuración). `ApiGatewayClaimsAuthenticator` lee `authorizer.jwt.claims` del propio JSON de
+    `x-amzn-request-context`, sin clave `requestContext` envolvente.
+  - `create_app` instancia `Settings` (el proceso se niega a arrancar si falla, 1.4) y cablea lo de la tarea 7:
+    `RequestLogMiddleware`, `register_error_handlers` y el log JSON con el nivel de `LOG_LEVEL`, aplicado también a
+    `uvicorn.error`: Starlette relanza las excepciones no controladas tras responder el 500 y uvicorn las registra con
+    su mensaje. `JsonFormatter` descarta los mensajes, así que el error de `Settings` sale por stderr con la variable
+    y sin su valor. Pruebas de punta a punta de `create_app`: un 422 y un 404 reales devuelven el cuerpo uniforme y
+    `x-request-id`, escriben su línea de log, y `uvicorn.error` usa `JsonFormatter`. Se repite la prueba de la
+    Property 4 con una ruta autenticada, para que los claims (`x-amzn-request-context`) tampoco aparezcan en el log.
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
   - [ ] 8.1 Prueba basada en propiedades: la autenticación en `prod` falla cerrada
     - _Property: 2_
@@ -89,7 +97,7 @@ runbook del diseño, no son tareas de código.
     - _Property: 8_
     - _Requirements: 2.3, NFR-6_
 - [ ] 12. Crear la imagen, `compose.yaml`, el emisor JWT de pruebas y el arranque local
-  - `backend/Dockerfile` (multi-etapa, LWA 1.1.0 por digest, CA de RDS, usuario sin privilegios, `linux/amd64` con
+  - `backend/Dockerfile` (multi-etapa, LWA 1.1.0 por digest, CA de RDS, usuario sin privilegios, `CMD` de uvicorn con `--no-access-log`, `linux/amd64` con
     `--provenance=false --sbom=false`), `.dockerignore`, `compose.yaml` con healthchecks, `dev/postgres/init/`,
     `dev/jwt-issuer/` (proyecto uv propio con sus pruebas) y `.env.example`.
   - Pruebas de punta a punta contra Compose: `up --wait` y `/health`; la imagen responde con el `CMD` de Lambda; un
@@ -145,7 +153,8 @@ runbook del diseño, no son tareas de código.
   - `docs/guia-de-desarrollo.md` (primer despliegue, Swagger UI en local), `tech.md · Comandos habituales`, NFR de
     latencia (≤ 60 s sumando reintentos) y flujo de despliegue con migraciones (con aprobación del propietario y
     `kspec steering-sync`), y `manual-checks.md` con los criterios no automatizables, incluidas las verificaciones
-    del primer despliegue de los ADR 0007 (Data API) y 0008 (log público).
+    del primer despliegue de los ADR 0007 (Data API) y 0008 (log público), y que el `requestId` real de API Gateway
+    cumple `[A-Za-z0-9._=-]{1,128}` (si no, el `request_id` caería a un UUID y se perdería la correlación).
   - _Requirements: 4.2, 4.5, 5.3, 5.4, 6.3, 7.3, 8.3, 8.4, NFR-2, NFR-3, NFR-5, NFR-6_
 - [ ] 24. Actualizar las vistas de arquitectura
   - Modelo `docs/architecture/diagrams.py` según «Architecture Views» (vistas 02, 03, 04, 08, 09, 10 y la nueva 13),

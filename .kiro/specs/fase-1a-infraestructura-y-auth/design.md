@@ -230,7 +230,7 @@ con su vista en el mismo PR.
 | `infrastructure.db.SqlDatabaseProbe` | `SELECT 1` con su propia conexión, cerrada al terminar; convierte el timeout en `DatabaseUnavailableError` | `DatabaseProbe` | `engine` |
 | `infrastructure.db.migrations` | Alembic async (`env.py`, `version_table_schema = "app"`), la revisión base vacía y `upgrade_to_head()` | `async upgrade_to_head(config: DatabaseConfig) -> str` | Alembic, `engine`, `metadata` |
 | `infrastructure.observability.JsonFormatter` | Serializar solo los campos de la lista blanca | `logging.Formatter` | Biblioteca estándar |
-| `api.middleware.RequestLogMiddleware` | Fijar `request_id` (de `requestContext.requestId` o UUID4; ignora el que mande el cliente), añadir `x-request-id` y escribir una línea por petición con la ruta plantilla, nunca la URL real | Middleware ASGI | `logging` |
+| `api.middleware.RequestLogMiddleware` | Fijar `request_id` (del `requestId` del contexto de Lambda Web Adapter, si es un identificador válido, o un UUID4; ignora el `x-request-id` que mande el cliente), añadir `x-request-id` y escribir una línea por petición con la ruta plantilla, nunca la URL real | Middleware ASGI | `logging` |
 | `api.errors` | `ErrorBody`/`ErrorDetail`; manejadores de `RequestValidationError`, `UnauthenticatedError`, `DatabaseUnavailableError`, 404, 405 y `Exception`; traducción de tipos de error de Pydantic a problemas en español | `register_error_handlers(app)` | `application` |
 | `api.dependencies.current_identity` | `Depends` que pasa las cabeceras al `Authenticator` inyectado | `-> Identity` | `application.ports` |
 | `api.routers.health` | `GET /health` sin BD · `GET /health/ready` | `response_model=HealthResponse` | `CheckReadiness` |
@@ -278,7 +278,7 @@ Reglas del contrato:
 
 | Componente | Responsabilidad | Interfaz |
 | --- | --- | --- |
-| `backend/Dockerfile` | Imagen multi-etapa sobre `python:3.13-slim`, fijada por digest. uv instala con `--locked`; LWA 1.1.0 se copia a `/opt/extensions/` por digest; bundle de CA de RDS; `PYTHONDONTWRITEBYTECODE=1` (el sistema de archivos de Lambda es de solo lectura); usuario sin privilegios; `CMD` de la API | `docker build --platform linux/amd64 --provenance=false --sbom=false backend` |
+| `backend/Dockerfile` | Imagen multi-etapa sobre `python:3.13-slim`, fijada por digest. uv instala con `--locked`; LWA 1.1.0 se copia a `/opt/extensions/` por digest; bundle de CA de RDS; `PYTHONDONTWRITEBYTECODE=1` (el sistema de archivos de Lambda es de solo lectura); usuario sin privilegios; `CMD` de la API con uvicorn y `--no-access-log` (su log de acceso imprime la URL real con su query) | `docker build --platform linux/amd64 --provenance=false --sbom=false backend` |
 | `backend/.dockerignore` | Excluir `.env*`, `*.pem`, `*.key`, `.venv`, `tests/`, `.git` y cualquier dato | — |
 | `compose.yaml` | Servicios `api`, `postgres` (`postgres:16` por digest) y `jwt-issuer`, con healthchecks y `depends_on: condition: service_healthy`. Puertos solo en `127.0.0.1`. La web (nginx) entra con su spec | `docker compose up --wait` |
 | `dev/postgres/init/` | Como superusuario local: crear `rds_iam` (NOLOGIN, ficticio) y `mg_admin` (CREATEROLE, sin superusuario, como el maestro de RDS). Después, como `mg_admin`, ejecutar `scripts/sql/bootstrap.sql` y fijar las contraseñas locales desde `.env` | Scripts de `/docker-entrypoint-initdb.d` |
@@ -479,16 +479,19 @@ ErrorDetail (api)             field: str (p. ej. "query.limit") · problem: str 
 | `NOT_FOUND` | 404 | «Recurso no encontrado.» | Ruta inexistente dentro de la API |
 | `METHOD_NOT_ALLOWED` | 405 | «Método no permitido.» | Método no soportado en una ruta existente |
 | `DATABASE_UNAVAILABLE` | 503 | «La base de datos se está despertando. Reintenta en unos segundos.» | Timeout o rechazo de conexión; con `Retry-After: 5` |
-| `INTERNAL_ERROR` | 500 | «Error interno.» | Excepción no controlada |
+| `INTERNAL_ERROR` | 500 | «Error interno.» | Excepción no controlada, o cualquier `HTTPException` distinta de 404 y 405 (falla cerrado; cada spec añade los códigos que necesite) |
 
 **Problemas de validación** (Pydantic `type` → `problem`): `missing` → «obligatorio»; `*_type` → «tipo no válido»;
 `*_too_short`/`*_too_long` → «longitud no válida»; `greater_than*`/`less_than*` → «fuera de rango»; `*_parsing` →
 «formato no válido»; cualquier otro → «valor no válido». No se usa el `msg` de Pydantic.
 
-**Claims leídos en `prod`** (cabecera `x-amzn-request-context`; todos como texto):
-`requestContext.requestId` · `requestContext.authorizer.jwt.claims.{sub, token_use, client_id}`.
+**Claims leídos en `prod`** (cabecera `x-amzn-request-context`; todos como texto). La cabecera es el propio contexto
+de la petición en JSON, sin una clave `requestContext` envolvente (así lo muestra la documentación de Lambda Web
+Adapter): `requestId` · `authorizer.jwt.claims.{sub, token_use, client_id}`.
 
-**Línea de log** (lista blanca; cualquier otro campo se descarta):
+**Línea de log** (lista blanca; cualquier otro campo se descarta). La línea de un error no controlado añade un único
+campo opcional, `traceback`: la clase de la excepción y sus marcos (archivo, línea, función y el texto de esa línea de código), nunca su mensaje, que
+puede llevar datos de la petición:
 
 ```json
 {"timestamp": "2026-11-02T14:03:11.204Z", "level": "INFO", "logger": "api.access",
@@ -527,7 +530,7 @@ vacíos) existe para probar el mecanismo de punta a punta (7.1 y 7.4).
 | Aurora en pausa o reanudando | `connect_timeout` de 20 s o rechazo de conexión | 503 `DATABASE_UNAVAILABLE` + `Retry-After: 5` | Sí: los clientes hasta 60 s en total (NFR-2); la prueba de humo, hasta 120 s |
 | La Lambda supera los 30 s | API Gateway | 5xx de API Gateway (503 según la comunidad; AWS no lo documenta); cuenta en la alarma de 5xx | Como el anterior |
 | Lambda `Inactive` tras semanas sin uso | Lambda rechaza la primera invocación | `api`: 5xx que el cliente reintenta; `migrator`: `deploy.py` espera con `function-active-v2` antes de invocar | Sí, una vez |
-| Excepción no controlada | Manejador de `Exception` | 500 `INTERNAL_ERROR`; traza solo en el log, sin datos de la petición | No |
+| Excepción no controlada | Manejador de `Exception` | 500 `INTERNAL_ERROR`; en el log, la clase y los marcos de la traza (`traceback`), sin el mensaje de la excepción ni datos de la petición | No |
 | Bootstrap SQL con Aurora reanudando | `DatabaseResumingException` / `DatabaseUnavailableException` | Espera y reintento | Sí, hasta 120 s |
 | Bootstrap SQL con otro error | `DatabaseErrorException`, `SecretsErrorException`… | Despliegue fallido antes de migrar; la API sigue igual | No |
 | Falla una migración | `status = error` o la invocación falla | Despliegue fallido; la API sigue en `D_prev` | No: se corrige con un PR |

@@ -22,6 +22,7 @@ dev = [
     "mypy",
     "import-linter",
     "hypothesis",
+    "httpx2",
 ]
 
 [tool.uv]

@@ -8,15 +8,15 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 
 | Fase | Spec | Estado | Criterios | Con prueba | Manuales | Sin verificar | Cobertura |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | [fase-1a-infraestructura-y-auth](#fase-1a-infraestructura-y-auth) | en curso | 45 | 3 | 0 | 42 | 6 % |
+| 1 | [fase-1a-infraestructura-y-auth](#fase-1a-infraestructura-y-auth) | en curso | 45 | 6 | 0 | 39 | 13 % |
 
 | Fase | Specs | Criterios verificados |
 | --- | --- | --- |
-| 1 | 1 | 3/45 (6 %) |
+| 1 | 1 | 6/45 (13 %) |
 
 ## fase-1a-infraestructura-y-auth
 
-[Requisitos](../.kiro/specs/fase-1a-infraestructura-y-auth/requirements.md) · [Diseño](../.kiro/specs/fase-1a-infraestructura-y-auth/design.md) · [Tareas](../.kiro/specs/fase-1a-infraestructura-y-auth/tasks.md) · 3/45 criterios verificados (6 %) · en curso · tareas 7/33
+[Requisitos](../.kiro/specs/fase-1a-infraestructura-y-auth/requirements.md) · [Diseño](../.kiro/specs/fase-1a-infraestructura-y-auth/design.md) · [Tareas](../.kiro/specs/fase-1a-infraestructura-y-auth/tasks.md) · 6/45 criterios verificados (13 %) · en curso · tareas 10/33
 
 | Requisito | Criterio | Componentes | Decisiones | Tareas | Pruebas | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -26,8 +26,8 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 | 1 | 1.4 | `config.Settings` | D9 | 6 ✓, 6.1 ✓ | `backend/tests/unit/test_config.py::test_settings_en_local_sin_ninguna_variable_local_las_nombra_todas`<br>`backend/tests/unit/test_config.py::test_settings_ignora_variables_ajenas_del_entorno`<br>`backend/tests/unit/test_config.py::test_settings_lista_de_clientes_ignora_espacios_y_elementos_vacios`<br>`backend/tests/unit/test_config.py::test_settings_local_y_test_con_todas_las_variables_carga_valores_tipados`<br>`backend/tests/unit/test_config.py::test_settings_nombres_en_minusculas_no_cuentan_como_variables`<br>`backend/tests/unit/test_config.py::test_settings_prod_valida_carga_sin_variables_locales`<br>`backend/tests/unit/test_config.py::test_settings_sin_variable_local_fuera_de_prod_falla_nombrandola`<br>`backend/tests/unit/test_config.py::test_settings_sin_variable_obligatoria_falla_nombrandola`<br>`backend/tests/unit/test_config.py::test_settings_timeout_de_conexion_acepta_los_limites`<br>`backend/tests/unit/test_config.py::test_settings_valor_invalido_falla_nombrando_la_variable_sin_mostrar_el_valor`<br>`backend/tests/unit/test_config_properties.py::test_settings_prod_con_cualquier_variable_local_falla_sin_revelar_valores` | ✅ |
 | **2** · API base, salud y errores | 2.1 | `api.routers.health`, `CheckReadiness`, `SqlDatabaseProbe` | D7 | 9 ○ | — | ❌ |
 | 2 | 2.2 | `api.routers.health`, `CheckReadiness`, `SqlDatabaseProbe` | D7 | 4 ✓, 9 ○ | — | ❌ |
-| 2 | 2.3 | `api.errors`, `api.openapi.build_openapi`, `openapi.yaml` | D6, D16 | 7 ○, 7.1 ○, 11 ○, 11.1 ○ | — | ❌ |
-| 2 | 2.4 | `RequestLogMiddleware`, `JsonFormatter` | — | 7 ○, 7.2 ○ | — | ❌ |
+| 2 | 2.3 | `api.errors`, `api.openapi.build_openapi`, `openapi.yaml` | D6, D16 | 7 ✓, 7.1 ✓, 11 ○, 11.1 ○ | `backend/tests/unit/test_error_properties.py::test_error_nunca_repite_el_valor_recibido_y_conserva_el_cuerpo_uniforme`<br>`backend/tests/unit/test_errors.py`<br>`backend/tests/unit/test_errors.py::test_base_de_datos_no_disponible_responde_503_con_retry_after`<br>`backend/tests/unit/test_errors.py::test_excepcion_no_controlada_responde_500_sin_su_mensaje`<br>`backend/tests/unit/test_errors.py::test_field_of_ubica_el_error_sin_indices_ni_nombres_del_cliente`<br>`backend/tests/unit/test_errors.py::test_metodo_no_permitido_responde_405_y_conserva_la_cabecera_allow`<br>`backend/tests/unit/test_errors.py::test_no_autenticado_responde_401_con_el_cuerpo_uniforme`<br>`backend/tests/unit/test_errors.py::test_problem_of_traduce_el_tipo_de_error_de_pydantic`<br>`backend/tests/unit/test_errors.py::test_ruta_inexistente_responde_404_sin_repetir_la_ruta` | ⚠️ |
+| 2 | 2.4 | `RequestLogMiddleware`, `JsonFormatter` | — | 7 ✓, 7.2 ✓ | `backend/tests/unit/test_logging_properties.py::test_logs_nunca_contienen_valores_de_la_peticion_y_solo_los_campos_permitidos`<br>`backend/tests/unit/test_request_logging.py::test_error_no_controlado_registra_la_traza_sin_el_mensaje_de_la_excepcion`<br>`backend/tests/unit/test_request_logging.py::test_log_de_acceso_usa_la_ruta_plantilla_y_no_la_url_real`<br>`backend/tests/unit/test_request_logging.py::test_log_de_error_de_validacion_registra_el_estado_422`<br>`backend/tests/unit/test_request_logging.py::test_log_de_ruta_inexistente_no_registra_la_url_real`<br>`backend/tests/unit/test_request_logging.py::test_peticion_correcta_escribe_una_linea_con_los_campos_de_la_lista_blanca`<br>`backend/tests/unit/test_request_logging.py::test_request_id_invalido_en_el_contexto_se_sustituye_por_un_uuid`<br>`backend/tests/unit/test_request_logging.py::test_request_id_sale_del_contexto_de_lambda_web_adapter`<br>`backend/tests/unit/test_request_logging.py::test_toda_respuesta_lleva_x_request_id_distinto_en_cada_peticion`<br>`backend/tests/unit/test_request_logging.py::test_x_request_id_enviado_por_el_cliente_se_ignora` | ✅ |
 | 2 | 2.5 | Contratos de import-linter | — | 5 ✓ | `backend/tests/architecture/test_import_contracts.py::test_lint_imports_cadena_api_application_domain_es_legitima`<br>`backend/tests/architecture/test_import_contracts.py::test_lint_imports_codigo_actual_cumple_los_contratos`<br>`backend/tests/architecture/test_import_contracts.py::test_lint_imports_copia_sin_violaciones_cumple_los_contratos`<br>`backend/tests/architecture/test_import_contracts.py::test_lint_imports_importacion_prohibida_rompe_el_contrato`<br>`backend/tests/architecture/test_import_contracts.py::test_lint_imports_main_puede_importar_todas_las_capas_y_la_configuracion` | ✅ |
 | **3** · Autenticación en la API | 3.1 | `ApiGatewayClaimsAuthenticator`, `LocalJwksAuthenticator`, `current_identity`, `api.routers.me`, `config.Settings`, `main.create_app` | D9, ADR 0005 | 8 ○, 8.1 ○ | — | ❌ |
 | 3 | 3.2 | `ApiGatewayClaimsAuthenticator`, `LocalJwksAuthenticator`, `current_identity`, `api.routers.me`, `config.Settings`, `main.create_app` | D9, ADR 0005 | 8 ○, 8.1 ○ | — | ❌ |
@@ -63,7 +63,7 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 | NFR | NFR-2 | `infrastructure.db.engine`, Lambda `api`, `scripts/smoke_test.py` | D7, D8 | 4 ✓, 9 ○, 14 ○, 23 ○ | — | ❌ |
 | NFR | NFR-3 | Módulo `operations`, estimación de coste | D13, D14, T-3 | 19 ○, 23 ○ | — | ❌ |
 | NFR | NFR-4 | Políticas IAM de los módulos, checkov | D4 | 3 ✓, 21 ○ | — | ❌ |
-| NFR | NFR-5 | `JsonFormatter`, `RequestLogMiddleware`, `.dockerignore`, `deploy.yml`, `deploy.py` | D3, D4, D11 | 3 ✓, 7 ○, 7.2 ○, 21 ○, 23 ○ | — | ❌ |
+| NFR | NFR-5 | `JsonFormatter`, `RequestLogMiddleware`, `.dockerignore`, `deploy.yml`, `deploy.py` | D3, D4, D11 | 3 ✓, 7 ✓, 7.2 ✓, 21 ○, 23 ○ | `backend/tests/unit/test_logging_properties.py::test_logs_nunca_contienen_valores_de_la_peticion_y_solo_los_campos_permitidos`<br>`backend/tests/unit/test_request_logging.py::test_error_no_controlado_registra_la_traza_sin_el_mensaje_de_la_excepcion`<br>`backend/tests/unit/test_request_logging.py::test_json_formatter_descarta_mensaje_excepcion_y_campos_ajenos`<br>`backend/tests/unit/test_request_logging.py::test_json_formatter_solo_admite_los_campos_declarados` | ⚠️ |
 | NFR | NFR-6 | `openapi.yaml`, `api.openapi.build_openapi`, `backend/tools/export_openapi.py`, `docs/api/README.md`, pruebas de contrato | D16, D17 | 11 ○, 11.1 ○, 23 ○ | — | ❌ |
 
 ## Pruebas huérfanas
