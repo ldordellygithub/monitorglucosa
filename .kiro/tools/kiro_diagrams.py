@@ -476,7 +476,7 @@ kspec diagrams check                         # modelo, geometría y SVG al día 
 ADR_HEADING = re.compile(r"^#\s+(\d{4})\.?\s+(.+?)\s*$", re.MULTILINE)
 ADR_STATUS = re.compile(r"\*\*Estado:\*\*\s*([^\n(]+)")
 ADR_TEMPLATE_MARKS = ("<problema", "<qué se decide", "<alternativa>", "<por qué no>", "<qué se gana", "<documentación oficial",
-                      "<IDs")
+                      "<IDs", "<criterio", "<opción elegida>", "<cómo cumple", "<la señal o el umbral")
 STEERING_FILES = ("product.md", "tech.md", "structure.md")
 
 
