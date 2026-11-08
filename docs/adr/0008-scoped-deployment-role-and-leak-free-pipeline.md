@@ -1,8 +1,8 @@
 # 0008. Rol de despliegue acotado con *permissions boundary* y pipeline público sin fugas
 
-- **Estado:** Aceptado
-- **Fecha:** 2026-11-02
-- **Decisiones relacionadas:** spec `fase-1a-infraestructura-y-auth` (D4, criterio 7.2, NFR-4 y NFR-5); `tech.md · Seguridad (CI)`; `git.md` (A-7, U-6, U-7); complementa ADR 0005 y ADR 0007
+- **Estado:** Aceptado (región actualizada de `sa-east-1` a `us-east-1` por [ADR 0011](0011-aws-region-us-east-1-for-cost-optimization.md))
+- **Fecha:** 2026-11-02 (actualizado el 2026-11-07)
+- **Decisiones relacionadas:** spec `fase-1a-infraestructura-y-auth` (D4, criterio 7.2, NFR-4 y NFR-5); `tech.md · Seguridad (CI)`; `git.md` (A-7, U-6, U-7); complementa ADR 0005, ADR 0007 y [ADR 0011](0011-aws-region-us-east-1-for-cost-optimization.md)
 
 ## Contexto
 
@@ -17,7 +17,7 @@ Datos verificados en la documentación oficial (2026-11-02):
 - **Logs de Actions:** la redacción de secretos «no está garantizada»; los datos estructurados (JSON, YAML) la hacen fallar; los valores sensibles que no son secretos de GitHub se enmascaran con `::add-mask::`; si algo se filtra, GitHub indica borrar el log y rotar el secreto.
 - **Terraform `sensitive`:** oculta el valor en la salida de la CLI (`(sensitive value)`), pero lo guarda en claro en el estado y en los archivos de plan.
 - **Recursos no acotables:** `ecr:GetAuthorizationToken` no admite recurso (los ejemplos de AWS lo separan con `Resource: "*"`). Para conectar una Lambda a una VPC, AWS exige seis permisos de EC2 sobre `"*"`: `CreateNetworkInterface`, `DescribeNetworkInterfaces`, `DescribeSubnets`, `DeleteNetworkInterface`, `AssignPrivateIpAddresses` y `UnassignPrivateIpAddresses`.
-- **`aws:RequestedRegion`:** controla el endpoint que se invoca, no el efecto de la operación. IAM, CloudFront y Budgets son servicios globales con un único endpoint en `us-east-1`: una condición que exija `sa-east-1` los denegaría, así que AWS indica excluirlos.
+- **`aws:RequestedRegion`:** controla el endpoint que se invoca, no el efecto de la operación. Al operar exclusivamente en `us-east-1` ([ADR 0011](0011-aws-region-us-east-1-for-cost-optimization.md)), la condición `aws:RequestedRegion` = `us-east-1` cubre tanto los servicios regionales del proyecto como los servicios globales (IAM, CloudFront y Budgets), cuyo plano de control reside en `us-east-1`.
 
 ## Decisión
 
@@ -27,7 +27,7 @@ Datos verificados en la documentación oficial (2026-11-02):
 - Crea o modifica roles solo si llevan el boundary `monitorglucosa-workload-boundary`: `iam:CreateRole`, `iam:PutRolePolicy`, `iam:AttachRolePolicy` y `iam:PutRolePermissionsBoundary` con la condición `iam:PermissionsBoundary`.
 - `Deny` explícito sobre editar o borrar la política del boundary, sobre retirar el boundary de un rol (`iam:DeleteRolePermissionsBoundary`) y sobre modificar el propio rol de despliegue.
 - No tiene boundary propio, porque es quien lo impone. Su poder lo limitan su política y esos `Deny`.
-- Alcance por prefijo de nombre `monitorglucosa-` y por `aws:RequestedRegion` = `sa-east-1`, salvo IAM, CloudFront y Budgets, que son servicios globales con endpoint en `us-east-1`.
+- Alcance por prefijo de nombre `monitorglucosa-` y por `aws:RequestedRegion` = `us-east-1` ([ADR 0011](0011-aws-region-us-east-1-for-cost-optimization.md)).
 - Solo recibe los permisos operativos que el diseño enumera: estado en S3, push a ECR, invocar el `migrator`, `execute-api:Invoke` en `GET /health/ready`, `rds-data:ExecuteStatement` y `secretsmanager:GetSecretValue` sobre el clúster y el secreto exactos (ADR 0007), y `ssm:GetParameter` del correo.
 
 **Excepciones a NFR-4** (`Action`/`Resource` sin acotar, porque AWS no lo permite). Cada una lleva un comentario con su motivo y una supresión con nombre en checkov:

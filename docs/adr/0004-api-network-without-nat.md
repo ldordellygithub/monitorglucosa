@@ -1,12 +1,12 @@
 # 0004. Acceso de la API a Aurora sin NAT Gateway
 
-- **Estado:** Aceptado
-- **Fecha:** 2026-11-01
-- **Decisiones relacionadas:** `T-10` y `T-11` (complementa `T-3`, ADR 0002)
+- **Estado:** Aceptado (región actualizada de `sa-east-1` a `us-east-1` por [ADR 0011](0011-aws-region-us-east-1-for-cost-optimization.md), manteniendo la arquitectura sin NAT Gateway)
+- **Fecha:** 2026-11-01 (actualizado el 2026-11-07)
+- **Decisiones relacionadas:** `T-10` y `T-11` (complementa `T-3`, ADR 0002 y [ADR 0011](0011-aws-region-us-east-1-for-cost-optimization.md))
 
 ## Contexto
 
-Aurora vive en subredes privadas de la VPC. Si Lambda entra en la VPC para conectarse por TCP, pierde la salida a internet. Para validar el JWT de Cognito (claves JWKS) o llamar a otros servicios haría falta un NAT Gateway, que cuesta unos US$0,093/h, ≈ US$68/mes en `sa-east-1` según tarifas de terceros. Eso es más de tres veces el presupuesto total. Además, AWS documenta que las sesiones abiertas impiden la pausa automática de Aurora, y un contenedor Lambda congelado conserva su conexión.
+Aurora vive en subredes privadas de la VPC. Si Lambda entra en la VPC para conectarse por TCP, pierde la salida a internet. Para validar el JWT de Cognito (claves JWKS) o llamar a otros servicios haría falta un NAT Gateway, cuyo precio oficial en `us-east-1` es US$0,045/h (≈ US$32,85/mes fijos antes de tráfico; ≈ US$68/mes en `sa-east-1`). Eso supera por sí solo el presupuesto total de US$20/mes. Además, AWS documenta que las sesiones abiertas impiden la pausa automática de Aurora, y un contenedor Lambda congelado conserva su conexión.
 
 ## Decisión
 
@@ -21,11 +21,11 @@ Aurora vive en subredes privadas de la VPC. Si Lambda entra en la VPC para conec
 
 | Alternativa | Motivo del descarte |
 | --- | --- |
-| NAT Gateway | ≈ US$68/mes en `sa-east-1` |
-| Lambda fuera de la VPC + RDS Data API | Disponible en `sa-east-1` para Aurora PostgreSQL ≥ 13.11, 14.8, 15.3 y 16.1, pero acopla los repositorios a una API de AWS, la ruta no se prueba con PostgreSQL real y no está verificado cómo responde con la base de datos pausada |
+| NAT Gateway | US$0,045/h ≈ US$32,85/mes fijos en `us-east-1` (≈ US$68/mes en `sa-east-1`), supera el presupuesto de US$20/mes |
+| Lambda fuera de la VPC + RDS Data API | Disponible en `us-east-1` para Aurora PostgreSQL ≥ 13.11, 14.8, 15.3 y 16.1, pero acopla los repositorios a una API de AWS, la ruta no se prueba con PostgreSQL real y no está verificado cómo responde con la base de datos pausada |
 | RDS Proxy | Impide la pausa automática y tiene coste propio |
 | Lambda Function URL | Sin autorizador JWT ni throttling gestionado |
-| Endpoint de interfaz de SSM para leer la configuración en ejecución | Coste por hora y por zona; con 2 zonas se come una parte grande del presupuesto (precio en `sa-east-1` por verificar) |
+| Endpoint de interfaz de SSM para leer la configuración en ejecución | US$0,01/h por AZ en `us-east-1` (≈ US$14,60/mes con 2 AZs), consume más del 70 % del presupuesto mensual |
 
 ## Consecuencias
 

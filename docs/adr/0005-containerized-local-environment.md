@@ -32,7 +32,7 @@ El proyecto debe funcionar igual en el equipo del autor, en cualquier otra máqu
 ## Consecuencias
 
 - Una máquina nueva solo necesita Docker y uv: el colector corre fuera de Docker.
-- Terraform añade un repositorio de ECR con política de ciclo de vida que conserva solo las últimas imágenes. El almacenamiento cuesta centavos al mes (precio por verificar en `sa-east-1`).
+- Terraform añade un repositorio de ECR en `us-east-1` ([ADR 0011](0011-aws-region-us-east-1-for-cost-optimization.md)) con política de ciclo de vida que conserva solo las últimas imágenes. El almacenamiento en ECR cuesta US$0,10/GB-mes (centavos de dólar al mes para pocas imágenes).
 - Una imagen de contenedor puede arrancar en frío más despacio que un .zip. Se mide contra la NFR de latencia.
 - El `.dockerignore` excluye `.env`, secretos y datos. Ninguna imagen contiene credenciales.
 - Docker **no** verifica lo que solo existe en AWS: el autorizador JWT, la autenticación IAM con Aurora, la pausa y reanudación, la VPC sin NAT, el throttling ni el coste. Lo cubre la prueba de humo tras cada despliegue, descrita en `tech.md`: `/health/ready` firmado con IAM y un 401 sin token, con vuelta al digest anterior si falla.

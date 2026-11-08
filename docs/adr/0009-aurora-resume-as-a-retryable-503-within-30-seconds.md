@@ -34,7 +34,7 @@ No verificado: el código exacto que devuelve HTTP API cuando la integración su
 | Alternativa | Motivo del descarte |
 | --- | --- |
 | Una REST API con un timeout de integración ampliado | Vuelve a abrir `T-10`; el ADR 0004 ya eligió HTTP API |
-| Mantener Aurora despierta con una capacidad mínima mayor que 0 | ≈ US$91/mes, contradice `T-3` |
+| Mantener Aurora despierta con una capacidad mínima mayor que 0 | ≈ US$43,80/mes en `us-east-1` (≈ US$91,25/mes en `sa-east-1`), contradice `T-3` |
 
 ## Consecuencias
 
