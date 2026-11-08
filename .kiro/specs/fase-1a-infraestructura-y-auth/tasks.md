@@ -116,16 +116,16 @@ runbook del diseño, no son tareas de código.
     - _Property: 6_
     - _Requirements: 7.4, 7.5_
 - [ ] 15. Crear la raíz de Terraform y el módulo `bootstrap`
-  - Versiones fijadas (Terraform 1.16.6, proveedor AWS 6.69.1), `default_tags`, backend S3 con `use_lockfile = true`,
-    bucket del estado, proveedor OIDC, rol `monitorglucosa-deploy` con su política y el *permissions boundary*, y ECR
+  - Versiones fijadas (Terraform 1.16.6, proveedor AWS 6.69.1 en `us-east-1`), `default_tags`, backend S3 con `use_lockfile = true`,
+    bucket del estado, proveedor OIDC, rol `monitorglucosa-deploy` con su política (`aws:RequestedRegion = us-east-1`, ADR 0008, ADR 0011) y el *permissions boundary*, y ECR
     (etiquetas inmutables, escaneo, 10 imágenes). `terraform test` con proveedores simulados.
   - _Requirements: 6.1, 7.2, 8.1, 8.2_
 - [ ] 16. Crear los módulos `network` y `database`
-  - VPC sin NAT ni IGW, endpoint gateway de S3, grupos de seguridad, Aurora PostgreSQL Serverless v2 (0–2 ACU, pausa de
+  - VPC en `us-east-1` (`us-east-1a` y `us-east-1b`) sin NAT ni IGW, endpoint gateway de S3, grupos de seguridad, Aurora PostgreSQL Serverless v2 (0–2 ACU, pausa de
     300 s, TLS forzado, IAM, Data API, backups de 7 días, protección contra borrado, contraseña gestionada por RDS).
   - _Requirements: 5.1, 5.2, 5.5_
 - [ ] 17. Crear el módulo `identity`
-  - User pool Essentials con MFA TOTP, sin registro propio, clientes `web` (refresh de 1 día) y `collector` (30 días,
+  - User pool Essentials en `us-east-1` con MFA TOTP, sin registro propio, clientes `web` (refresh de 1 día) y `collector` (30 días,
     rotación y `retry_grace_period_seconds`), dominio de prefijo y usuario propietario con correo de Parameter Store.
   - _Requirements: 4.1, 4.2, 4.3, 4.4_
 - [ ] 18. Crear los módulos `api` y `site`
@@ -134,7 +134,7 @@ runbook del diseño, no son tareas de código.
     y CSP.
   - _Requirements: 4.5, 6.1, 6.2, 6.3, 6.4, 6.5_
 - [ ] 19. Crear el módulo `operations`
-  - Tema SNS, las cuatro alarmas, presupuesto de US$20 con aviso al 80 % y retención de 30 días en los grupos de logs.
+  - Tema SNS, las cuatro alarmas, presupuesto de US$20 con avisos al 80 % (US$16) y al 100 % (US$20) y retención de 30 días en los grupos de logs.
   - _Requirements: 8.3, 8.4, 8.5, NFR-3_
 - [ ] 20. Checkpoint: `terraform fmt -check`, `validate`, `terraform test` y checkov en verde
 
@@ -150,10 +150,10 @@ runbook del diseño, no son tareas de código.
     de que `G-2` (revisor del entorno `prod`) esté resuelta en el kit.
   - _Requirements: 7.2, 7.3, 7.4, 7.5_
 - [ ] 23. Documentar el runbook, los comandos reales y las verificaciones manuales
-  - `docs/guia-de-desarrollo.md` (primer despliegue, Swagger UI en local), `tech.md · Comandos habituales`, NFR de
+  - `docs/guia-de-desarrollo.md` (primer despliegue en `us-east-1`, avisos de Budgets al 80 % = US$16 y 100 % = US$20 con techo puntual de alerta de US$30/mes, Swagger UI en local), `tech.md · Comandos habituales`, NFR de
     latencia (≤ 60 s sumando reintentos) y flujo de despliegue con migraciones (con aprobación del propietario y
     `kspec steering-sync`), y `manual-checks.md` con los criterios no automatizables, incluidas las verificaciones
-    del primer despliegue de los ADR 0007 (Data API) y 0008 (log público), y que el `requestId` real de API Gateway
+    del primer despliegue de los ADR 0007 (Data API), 0008 (log público) y 0011 (región `us-east-1` y factura del primer mes), y que el `requestId` real de API Gateway
     cumple `[A-Za-z0-9._=-]{1,128}` (si no, el `request_id` caería a un UUID y se perdería la correlación).
   - _Requirements: 4.2, 4.5, 5.3, 5.4, 6.3, 7.3, 8.3, 8.4, NFR-2, NFR-3, NFR-5, NFR-6_
 - [ ] 24. Actualizar las vistas de arquitectura

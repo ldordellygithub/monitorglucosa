@@ -42,7 +42,7 @@ flowchart LR
         APIL -- "contraseña local" --> PG[("postgres:16")]
         APIL -. JWKS .-> JWT["jwt-issuer<br/>(solo pruebas)"]
     end
-    subgraph AWS["AWS sa-east-1 · cuenta exclusiva de prod"]
+    subgraph AWS["AWS us-east-1 · cuenta exclusiva de prod"]
         CF["CloudFront + S3 privado<br/>sitio provisional"]
         COG["Cognito Essentials<br/>MFA TOTP · clientes web y colector"]
         GW["HTTP API<br/>/api/v1: JWT · /health/ready: IAM · /health: pública<br/>throttling 10/20 · CORS"]
@@ -52,7 +52,7 @@ flowchart LR
             DB[("Aurora PostgreSQL 16<br/>Serverless v2 · 0–2 ACU · pausa 300 s")]
         end
         ECR["ECR<br/>etiquetas inmutables"]
-        OPS["CloudWatch: logs 30 d y 4 alarmas<br/>SNS correo · Budgets US$20"]
+        OPS["CloudWatch: logs 30 d y 4 alarmas<br/>SNS correo · Budgets 80 % (US$16) y 100 % (US$20)"]
         SSM["Parameter Store<br/>correo del propietario"]
         SM["Secrets Manager<br/>secreto maestro (RDS)"]
     end
@@ -165,7 +165,7 @@ Lo ejecuta el propietario una sola vez. El runbook se escribe en `docs/guia-de-d
 | Elevación | El rol de despliegue crea un rol administrador | *Permissions boundary* obligatorio; el rol no puede editar el boundary ni a sí mismo | D4 |
 | Elevación | La API ejecuta DDL o lee el secreto maestro | `mg_api` solo tiene DML; las Lambdas no tienen permisos sobre Secrets Manager | D3 |
 
-### Coste estimado (precios de lista de `sa-east-1`, 2026-11-01)
+### Coste estimado (precios de lista de `us-east-1`, 2026-11-07)
 
 Escenario de uso bajo: unas 3 sesiones al día (sincronización y consulta web), cada una con unos 10 minutos de Aurora
 activa contando los 300 s previos a la pausa, más los despliegues y el mantenimiento (Aurora espera 20 min tras cada
@@ -173,23 +173,24 @@ operación administrativa).
 
 | Concepto | Precio de lista | Supuesto | US$/mes |
 | --- | --- | --- | --- |
-| Aurora Serverless v2 (cómputo) | 0,25 / ACU-h | ~15 h activa × 0,75 ACU ≈ 12 ACU-h | 3,00 |
-| Aurora (almacenamiento y E/S) | 0,19 / GB-mes · 0,28 / millón de E/S | 1 GB · < 0,5 M E/S | 0,33 |
-| Backups de Aurora (7 días) | 0,037 / GB-mes por encima del tamaño del clúster | Dentro de la asignación gratuita | 0,00 |
+| Aurora Serverless v2 (cómputo) | 0,12 / ACU-h | ~15 h activa × 0,75 ACU ≈ 12 ACU-h | 1,44 |
+| Aurora (almacenamiento y E/S) | 0,10 / GB-mes · 0,20 / millón de E/S | 1 GB · < 0,5 M E/S | 0,20 |
+| Backups de Aurora (7 días) | 0,021 / GB-mes por encima del tamaño del clúster | Dentro de la asignación gratuita | 0,00 |
 | Secrets Manager (secreto maestro) | 0,40 / secreto | 1 secreto | 0,40 |
-| CloudWatch: alarmas | 0,135 / alarma estándar | 4 alarmas | 0,54 |
-| CloudWatch: logs | 0,90 / GB ingerido · 0,0408 / GB-mes | < 0,1 GB | 0,09 |
+| CloudWatch: alarmas | 0,10 / alarma estándar | 4 alarmas | 0,40 |
+| CloudWatch: logs | 0,50 / GB ingerido · 0,03 / GB-mes | < 0,1 GB | 0,05 |
 | ECR | 0,10 / GB-mes | 10 imágenes ≈ 2 GB | 0,20 |
-| Cognito Essentials | 0,015 / MAU | 1 MAU | 0,02 |
-| API Gateway HTTP API | 1,59 / millón | < 50 000 peticiones | 0,08 |
+| Cognito Essentials | 0,015 / MAU (primeros 10 000 MAU en capa gratuita) | 1 MAU | 0,00 |
+| API Gateway HTTP API | 1,00 / millón | < 50 000 peticiones | 0,05 |
 | Lambda | 0,20 / millón · 0,0000166667 / GB-s | Dentro de la capa gratuita (1 M y 400 000 GB-s) | 0,00 |
-| Data API | 0,70 / millón | < 100 llamadas | 0,00 |
-| KMS (claves gestionadas por AWS), SNS correo (1 000 gratis), Budgets sin acciones | — | Sin cuota mensual en este uso | 0,00 |
+| Data API | 0,35 / millón | < 100 llamadas | 0,00 |
+| KMS (claves gestionadas por AWS), SNS correo (1 000 gratis), Budgets sin acciones | — | Sin cuota mensual fija en este uso | 0,00 |
 | S3 y CloudFront | Pago por uso | KB de estado y del sitio provisional; tráfico de pocos MB | ≈ 0,01 |
-| **Total estimado** | | | **≈ 4,7** |
+| **Total estimado** | | | **≈ 2,75** |
 
-El riesgo de coste no es el uso, sino que Aurora deje de pausarse: 730 h × 0,5 ACU ≈ US$91/mes (`T-3`). La alarma
-«Aurora sin pausa» (D14) avisa en 6 h, mucho antes que el 80 % de Budgets. La factura del primer mes valida esta tabla
+El riesgo de coste no es el uso, sino que Aurora deje de pausarse: 730 h × 0,5 ACU ≈ US$43,80/mes en `us-east-1`
+(≈ US$91,25/mes en `sa-east-1`; `T-3`, ADR 0002, ADR 0011). La alarma «Aurora sin pausa» (D14) avisa en 6 h, mucho
+antes que los avisos al 80 % (US$16) y al 100 % (US$20) de Budgets. La factura del primer mes valida esta tabla
 (NFR-3).
 
 ### Architecture Views
@@ -257,7 +258,7 @@ que genera API Gateway.
 | Respuestas reutilizables | `ValidationError` (422; la usarán las rutas con parámetros de las specs siguientes), `Unauthenticated` (401, API o gateway), `GatewayForbidden` (403), `Throttled` (429), `InternalError` (500, API o gateway), `GatewayUnavailable` (503) y `DatabaseUnavailable` (503, API con `Retry-After` o gateway) |
 | Esquemas de seguridad | `cognitoAccessToken` (HTTP Bearer JWT: access token de Cognito con ámbito `openid`) y `awsSigV4` (firma SigV4 de `execute-api`) |
 | Cabeceras | `x-request-id` en toda respuesta de la API (nunca en las del gateway) y `Retry-After` en el 503 de la API |
-| `servers` | Producción (`https://{apiId}.execute-api.sa-east-1.amazonaws.com`, sin el identificador real) y local (`http://localhost:8000`) |
+| `servers` | Producción (`https://{apiId}.execute-api.us-east-1.amazonaws.com`, sin el identificador real) y local (`http://localhost:8000`) |
 | `info` | Autenticación, modelo de errores, contrato de reintento con la base de datos en pausa, límites, CORS y convenciones, en español |
 
 Reglas del contrato:
@@ -290,12 +291,12 @@ Reglas del contrato:
 | Módulo | Recursos | Protecciones |
 | --- | --- | --- |
 | `bootstrap` | Bucket del estado `monitorglucosa-tfstate-<cuenta>` (versionado, versiones antiguas 90 días, SSE-S3, sin acceso público, política que exige TLS); proveedor OIDC de GitHub; rol `monitorglucosa-deploy`; política `monitorglucosa-workload-boundary`; repositorio ECR `monitorglucosa-api` (etiquetas inmutables, escaneo al subir, conserva 10 imágenes, política de repositorio para `lambda.amazonaws.com` limitada a las dos funciones) | `prevent_destroy` en el bucket y en ECR |
-| `network` | VPC `10.20.0.0/16` con DNS activado; 2 subredes privadas `/24` en `sa-east-1a` y `sa-east-1b`, sin IGW ni NAT; endpoint gateway de S3 asociado a sus tablas de rutas; grupos de seguridad | — |
+| `network` | VPC `10.20.0.0/16` con DNS activado; 2 subredes privadas `/24` en `us-east-1a` y `us-east-1b`, sin IGW ni NAT; endpoint gateway de S3 asociado a sus tablas de rutas; grupos de seguridad | — |
 | `database` | Clúster Aurora PostgreSQL 16 (la menor más reciente disponible, ≥ 16.4, fijada exacta); `serverlessv2_scaling_configuration` con min 0, max 2 y `seconds_until_auto_pause = 300`; una instancia `db.serverless`; grupo de parámetros con `rds.force_ssl = 1`; `iam_database_authentication_enabled`; `enable_http_endpoint` (Data API); `storage_encrypted` (clave `aws/rds`); `backup_retention_period = 7`; `deletion_protection`; snapshot final; `manage_master_user_password`; base de datos `monitorglucosa`; sin exportar logs ni Performance Insights | `prevent_destroy` |
 | `identity` | User pool (`user_pool_tier = ESSENTIALS`, `mfa_configuration = ON` solo con TOTP, `allow_admin_create_user_only`, `username_attributes = [email]`, `deletion_protection = ACTIVE`, correo por defecto de Cognito); dominio de prefijo `monitorglucosa-<sufijo aleatorio>`; clientes `web` y `collector`; usuario propietario | `prevent_destroy` en el pool y el usuario |
 | `api` | Lambdas `monitorglucosa-api` y `monitorglucosa-migrator`; sus roles con el boundary; HTTP API con etapa `$default` en despliegue automático, autorizador JWT (emisor del user pool, audiencia = los dos `client_id`), rutas (`ANY /api/v1/{proxy+}` con `authorization_scopes = ["openid"]`), throttling 10/20, CORS y logs de acceso en JSON; `aws_lambda_permission` con `source_arn` | — |
 | `site` | Bucket S3 privado (SSE-S3, sin acceso público); CloudFront con OAC, `default_root_object = index.html` y HTTPS obligatorio; política de cabeceras de seguridad; `index.html` provisional («monitorglucosa · en construcción») | La spec de la web sustituye el contenido y la CSP |
-| `operations` | Tema SNS `monitorglucosa-alarms` con suscripción por correo; las 4 alarmas; presupuesto mensual; grupos de logs con retención de 30 días | — |
+| `operations` | Tema SNS `monitorglucosa-alarms` con suscripción por correo; las 4 alarmas; presupuesto mensual de US$20 con avisos al 80 % (US$16) y al 100 % (US$20); grupos de logs con retención de 30 días | — |
 
 El proveedor usa `default_tags` con `Environment = prod`, `Project = monitorglucosa` y `Owner = ldordellygithub`. Una
 prueba de `terraform test` falla si un recurso etiquetable no hereda las tres etiquetas.
@@ -374,7 +375,7 @@ Ninguna variable contiene secretos (`T-11`). Lambda las cifra en reposo con su c
 | Errores del `migrator` | `AWS/Lambda Errors` (`monitorglucosa-migrator`) | Suma ≥ 1 en 5 min; sin datos = OK | SNS → correo |
 | 5xx de API Gateway | `AWS/ApiGateway 5xx` (API, etapa `$default`) | Suma ≥ 1 en 5 min; sin datos = OK | SNS → correo |
 | Aurora sin pausa | `AWS/RDS ServerlessDatabaseCapacity` (instancia), mínimo | > 0 durante 6 periodos de 1 h; sin datos = OK | SNS → correo |
-| Presupuesto | AWS Budgets, coste mensual de la cuenta | Real > 80 % o previsto > 80 % de US$20 | Correo directo de Budgets |
+| Presupuesto | AWS Budgets, coste mensual de la cuenta | Real > 80 % (US$16) o previsto > 80 % (US$16), y real > 100 % (US$20) o previsto > 100 % (US$20) de US$20 | Correo directo de Budgets |
 
 | Grupo de logs | Contenido | Retención |
 | --- | --- | --- |
@@ -441,7 +442,7 @@ documentación de la versión 6.69.1.
 | `docs/api/README.md` (nuevo, generado) | Referencia de la API desde `backend/openapi.json`: operaciones, seguridad, esquemas, catálogo de errores, contrato de reintento e índice de los `openapi.yaml` por spec |
 | `.kiro/steering/tech.md` | «Comandos habituales» con los comandos reales; NFR de latencia («≤ 60 s sumando reintentos; cada petición < 30 s»); el flujo de despliegue con las migraciones. Con tu aprobación y `kspec steering-sync` |
 | `docs/architecture/diagrams.py` | Las vistas de «Architecture Views» |
-| `docs/adr/` | ADR 0006–0009 (D2, D3, D4 y D7) con `kspec adr new` |
+| `docs/adr/` | ADR 0006–0009 (D2, D3, D4 y D7) con `kspec adr new` (actualizados con `us-east-1` junto a ADR 0010 y ADR 0011) |
 
 ## Data Models
 
@@ -538,7 +539,7 @@ vacíos) existe para probar el mecanismo de punta a punta (7.1 y 7.4).
 | Falla la prueba de humo | ≠ 200 en `/health/ready` tras 120 s, o ≠ 401 sin token | Vuelta atrás a `D_prev` y despliegue fallido | No |
 | Falla el primer despliegue (no hay `D_prev`) | `deploy.py` no encuentra el output | Despliegue fallido sin vuelta atrás; alarma y log | No |
 | Estado de Terraform bloqueado | Lockfile de S3 | El job falla; `concurrency: deploy-prod` evita la carrera | Se relanza a mano |
-| Gasto > 80 % real o previsto | AWS Budgets | Correo al propietario | — |
+| Gasto > 80 % (US$16) o > 100 % (US$20) real o previsto | AWS Budgets | Correo al propietario (techo puntual de alerta en runbook: US$30/mes) | — |
 | Aurora no se pausa en 6 h | Alarma «Aurora sin pausa» | Correo; runbook de la vista 13 (buscar conexiones abiertas) | — |
 
 ## Testing Strategy
@@ -584,7 +585,7 @@ las specs. Las pruebas usan solo datos sintéticos.
 | 5.4 | Tras 300 s sin actividad, `ServerlessDatabaseCapacity` = 0 |
 | 6.3 | Ráfaga de 30 peticiones a `/health` → al menos un 429 |
 | 7.3 | El job `deploy` espera la aprobación del revisor de `prod` |
-| 8.3 | Correo de Budgets recibido (notificación de prueba con un umbral temporal) |
+| 8.3 | Correo de Budgets recibido para los avisos al 80 % (US$16) y al 100 % (US$20) (notificación de prueba con un umbral temporal) |
 | 8.4 | `aws cloudwatch set-alarm-state` en cada alarma → correo recibido |
 | NFR-2 | p95 de `/health` y `/api/v1/me` medido con 100 peticiones calientes; tiempo de reanudación tras más de 24 h |
 | NFR-3 | Estimación de este diseño y factura del primer mes |
@@ -655,8 +656,9 @@ las specs. Las pruebas usan solo datos sintéticos.
 - **Decisión:**
   - El rol de despliegue solo crea o modifica roles con el boundary `monitorglucosa-workload-boundary`. Un `Deny`
     explícito le impide editar o retirar el boundary (`iam:DeleteRolePermissionsBoundary`) y modificar su propio rol.
-    Su alcance se acota por el prefijo `monitorglucosa-` y por `aws:RequestedRegion = sa-east-1`, salvo los servicios
-    globales (IAM, CloudFront y Budgets), cuyo único endpoint está en `us-east-1`.
+    Su alcance se acota por el prefijo `monitorglucosa-` y por `aws:RequestedRegion = us-east-1`, que en `us-east-1`
+    cubre de forma uniforme tanto los servicios regionales como los globales (IAM, CloudFront y Budgets), cuyo endpoint
+    de control plane también reside en `us-east-1` (ADR 0008, ADR 0011).
   - Terraform escribe en el log solo el resumen del plan. El ARN del rol y el nombre del bucket son secretos del
     entorno, así que se enmascaran; `deploy.py` enmascara además el ID de cuenta con `::add-mask::`; los outputs
     sensibles se marcan `sensitive`, y no se suben planes como artefactos.
@@ -700,7 +702,7 @@ las specs. Las pruebas usan solo datos sintéticos.
   `Retry-After: 5`; la Lambda tiene un timeout de 30 s. Los clientes reintentan hasta 60 s en total
   (NFR-2, reformulado el 2026-11-01); la prueba de humo del despliegue, con más margen, hasta 120 s (D5).
 - **Alternativas descartadas:** una REST API con timeout ampliado (vuelve a abrir `T-10`); mantener Aurora despierta
-  (≈ US$91/mes, contradice `T-3`).
+  (≈ US$43,80/mes en `us-east-1` / ≈ US$91,25/mes en `sa-east-1`, contradice `T-3`).
 - **Consecuencias:** el colector y la web heredan este contrato de reintento. Se corrige la frase de `tech.md`.
 - **Fuentes:** [cuotas de HTTP API](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-quotas.html) y
   [pausa automática](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2-auto-pause.html).
@@ -777,7 +779,8 @@ las specs. Las pruebas usan solo datos sintéticos.
 ### D14. Alarma «Aurora sin pausa» y tema SNS sin cifrado en reposo
 
 - **Contexto:**
-  - El mayor riesgo de coste es que Aurora no se pause (≈ US$91/mes), y Budgets solo avisa al acercarse al límite.
+  - El mayor riesgo de coste es que Aurora no se pause (≈ US$43,80/mes en `us-east-1`; ≈ US$91,25/mes en `sa-east-1`),
+    y Budgets solo avisa al acercarse al límite (80 % = US$16 y 100 % = US$20).
   - Las alarmas de CloudWatch no pueden publicar en un tema cifrado con `aws/sns`, porque su política de clave no se
     puede editar.
 - **Decisión:** una cuarta alarma sobre `ServerlessDatabaseCapacity` (mínimo > 0 durante 6 h). El tema SNS de las
@@ -785,7 +788,7 @@ las specs. Las pruebas usan solo datos sintéticos.
   personales ni de salud, y viajan por TLS.
 - **Alternativas descartadas:** una clave KMS propia para el tema (US$1/mes, más una política de clave que mantener,
   para proteger mensajes sin datos sensibles); solo Budgets (avisaría días tarde).
-- **Consecuencias:** US$0,135/mes por la alarma extra. La alarma sirve a NFR-3 y amplía 8.4 con una señal más, sin
+- **Consecuencias:** US$0,10/mes en `us-east-1` por la alarma extra. La alarma sirve a NFR-3 y amplía 8.4 con una señal más, sin
   cambiar el criterio.
 - **Fuente:** [AWS re:Post: alarma con un tema SNS cifrado](https://repost.aws/knowledge-center/cloudwatch-configure-alarm-sns).
 
@@ -845,12 +848,12 @@ las specs. Las pruebas usan solo datos sintéticos.
 | Seguridad: entrada externa validada; secretos fuera del código, los logs y git | ✅ | `Settings` y `ErrorBody` sin valores; `.dockerignore`; contraseña maestra solo en Secrets Manager (D3); correo en Parameter Store (D11); logs con lista blanca (Property 4); gitleaks, semgrep y checkov en `ci`; STRIDE en Architecture |
 | Permisos e IAM con mínimo privilegio (sin `*`) | ❌ (justificado) | Un rol por servicio; `rds-db:connect` por usuario de BD; boundary (D4). Las excepciones que AWS no permite acotar están listadas y suprimidas con nombre |
 | Infraestructura como código, con etiquetas `Environment`, `Project` y `Owner` | ✅ | Todo en Terraform, incluido el bucket del estado (D1); `default_tags` con prueba (8.2). Pasos manuales: el primer apply local, el parámetro del correo y los secretos de GitHub, que son datos (D1, D11) |
-| Coste: la opción más económica que cumple los requisitos | ✅ | ≈ US$4,7/mes con precios de lista; sin NAT, endpoints de interfaz, RDS Proxy, WAF ni claves KMS propias; `migrator` sin coste en reposo; alarma de pausa (D14) |
+| Coste: la opción más económica que cumple los requisitos | ✅ | ≈ US$2,75/mes con precios de lista de `us-east-1` (ADR 0011); sin NAT, endpoints de interfaz, RDS Proxy, WAF ni claves KMS propias; `migrator` sin coste en reposo; alarma de pausa (D14) y avisos de Budgets al 80 % (US$16) y 100 % (US$20) |
 | Pruebas: cobertura ≥ 80 % de la lógica de negocio | ✅ | `--cov-fail-under=80` en `domain` y `application`; 7 propiedades con hypothesis; integración con PostgreSQL real |
 | Simplicidad: sin abstracciones ni funciones «por si acaso» | ✅ | Dos puertos con usos reales; `domain/` vacío solo para los contratos; sin alias de Lambda (D5); CORS solo con `GET` (D13) |
 | Clean Architecture y composition root único (`structure.md`) | ✅ | Contratos de import-linter; `main.py` con dos fábricas; `api` no importa `domain` ni `infrastructure`. Equivale a routers → services → repositories de la regla global |
 | Datos de salud tratados como sensibles; nada en logs (`product.md`) | ✅ | Esta spec no maneja datos de salud; logs de PostgreSQL sin exportar; logs de Actions sin datos (D4) |
-| Datos solo en `sa-east-1` (`tech.md · Restricciones`) | ✅ | Todo regional en `sa-east-1`; IAM, CloudFront y Budgets son globales y no guardan datos de salud |
+| Datos en la región autorizada `us-east-1` (`tech.md · Restricciones`, ADR 0011) | ✅ | Todo regional y los endpoints de servicios globales (IAM, CloudFront y Budgets) operan en `us-east-1`; los servicios globales no guardan datos de salud |
 | `/health` no despierta Aurora (`tech.md · Observabilidad`) | ✅ | `/health` sin BD (2.1); LWA usa `/health` para el arranque; sin monitores sintéticos |
 | Una spec no resuelve decisiones abiertas | ✅ | `G-2` se resuelve en el kit, fuera de la spec; `T-7` (callback) se valida en la spec del colector; `T-9` queda fuera |
 | Repositorio público sin datos del titular (`git.md`) | ✅ | Correo y cuenta fuera del repositorio; ARN y bucket como secretos de entorno; máscaras en los logs (D4); `servers` del contrato sin el identificador real de la API |
@@ -867,21 +870,21 @@ las specs. Las pruebas usan solo datos sintéticos.
 | 2.4 | `RequestLogMiddleware`, `JsonFormatter` | — |
 | 2.5 | Contratos de import-linter | — |
 | 3 | `ApiGatewayClaimsAuthenticator`, `LocalJwksAuthenticator`, `current_identity`, `api.routers.me`, `config.Settings`, `main.create_app` | D9, ADR 0005 |
-| 4 | Módulo `identity`, autorizador JWT del módulo `api` | D11, D12, ADR 0003, T-7 |
-| 5.1, 5.2, 5.5 | Módulos `network` y `database` | D13, ADR 0002, ADR 0004 |
+| 4 | Módulo `identity`, autorizador JWT del módulo `api` | D11, D12, ADR 0003, ADR 0011, T-7 |
+| 5.1, 5.2, 5.5 | Módulos `network` y `database` | D13, ADR 0002, ADR 0004, ADR 0011 |
 | 5.3 | `infrastructure.db.engine`, `scripts/sql/bootstrap.sql`, `scripts/db_bootstrap.py` | D3, D8 |
 | 5.4 | `infrastructure.db.engine`, `SqlDatabaseProbe` | D8, ADR 0004 |
 | 6 | Módulos `api` y `site`, `bootstrap` (ECR) | D13, ADR 0004, ADR 0005 |
 | 7.1 | `.github/workflows/ci.yml`, `.github/rulesets/main.json`, `backend/tools/export_openapi.py` | D15 |
-| 7.2, 7.3 | Módulo `bootstrap` (OIDC), `.github/workflows/deploy.yml` | D1, D4, G-2 |
-| 7.4, 7.5 | `scripts/deploy.py`, `main.create_migrator_app`, `infrastructure.db.migrations`, `scripts/db_bootstrap.py`, `scripts/smoke_test.py` | D2, D3, D5, D7 |
+| 7.2, 7.3 | Módulo `bootstrap` (OIDC), `.github/workflows/deploy.yml` | D1, D4, ADR 0008, ADR 0011, G-2 |
+| 7.4, 7.5 | `scripts/deploy.py`, `main.create_migrator_app`, `infrastructure.db.migrations`, `scripts/db_bootstrap.py`, `scripts/smoke_test.py` | D2, D3, D5, D7, ADR 0006, ADR 0007, ADR 0009 |
 | 8.1, 8.2 | Módulo `bootstrap`, `default_tags` del proveedor | D1 |
-| 8.3, 8.4, 8.5 | Módulo `operations` | D11, D14 |
+| 8.3, 8.4, 8.5 | Módulo `operations` | D11, D14, R6.2 |
 | NFR-1 | Transversal (pytest-cov) | — |
-| NFR-2 | `infrastructure.db.engine`, Lambda `api`, `scripts/smoke_test.py` | D7, D8 |
-| NFR-3 | Módulo `operations`, estimación de coste | D13, D14, T-3 |
-| NFR-4 | Políticas IAM de los módulos, checkov | D4 |
-| NFR-5 | `JsonFormatter`, `RequestLogMiddleware`, `.dockerignore`, `deploy.yml`, `deploy.py` | D3, D4, D11 |
+| NFR-2 | `infrastructure.db.engine`, Lambda `api`, `scripts/smoke_test.py` | D7, D8, ADR 0009 |
+| NFR-3 | Módulo `operations`, estimación de coste | D13, D14, ADR 0002, ADR 0011, T-3 |
+| NFR-4 | Políticas IAM de los módulos, checkov | D4, ADR 0008 |
+| NFR-5 | `JsonFormatter`, `RequestLogMiddleware`, `.dockerignore`, `deploy.yml`, `deploy.py` | D3, D4, D11, ADR 0008 |
 | NFR-6 | `openapi.yaml`, `api.openapi.build_openapi`, `backend/tools/export_openapi.py`, `docs/api/README.md`, pruebas de contrato | D16, D17 |
 
 ## Correctness Properties

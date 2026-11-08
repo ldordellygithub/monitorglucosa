@@ -40,8 +40,8 @@ info:
     Campos JSON en `snake_case`. Fechas en ISO 8601 con zona horaria (las primeras llegan con la spec de
     lecturas). Toda respuesta de la API incluye `x-request-id`, que también aparece en los logs.
 servers:
-  - url: https://{apiId}.execute-api.sa-east-1.amazonaws.com
-    description: Producción (AWS sa-east-1). El identificador sale del output `api_endpoint` de Terraform.
+  - url: https://{apiId}.execute-api.us-east-1.amazonaws.com
+    description: Producción (AWS us-east-1). El identificador sale del output `api_endpoint` de Terraform.
     variables:
       apiId:
         default: apiId
@@ -161,7 +161,7 @@ components:
       in: header
       name: Authorization
       description: |
-        Firma AWS Signature Version 4 para el servicio `execute-api` en `sa-east-1`. Solo el rol de despliegue
+        Firma AWS Signature Version 4 para el servicio `execute-api` en `us-east-1`. Solo el rol de despliegue
         tiene `execute-api:Invoke` sobre `GET /health/ready`.
   headers:
     XRequestId:

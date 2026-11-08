@@ -3,10 +3,10 @@
 ## Introduction
 
 Esta spec construye el esqueleto desplegable de monitorglucosa para el usuario propietario: la API base en FastAPI
-con Clean Architecture, el entorno local con Docker Compose, la infraestructura de `prod` en AWS (`sa-east-1`) con
+con Clean Architecture, el entorno local con Docker Compose, la infraestructura de `prod` en AWS (`us-east-1`) con
 Terraform, la identidad con Amazon Cognito y el pipeline de integración y despliegue con prueba de humo. Todavía no
 guarda lecturas: deja la API desplegada, protegida y observable para que las specs de sincronización BLE y de
-registro, historial y web solo añadan funcionalidad. Materializa los ADR 0002, 0003 (lado servidor), 0004 y 0005.
+registro, historial y web solo añadan funcionalidad. Materializa los ADR 0002, 0003 (lado servidor), 0004, 0005 y 0011.
 
 ## Requirements
 
@@ -51,7 +51,7 @@ registro, historial y web solo añadan funcionalidad. Materializa los ADR 0002, 
 
 #### Acceptance Criteria
 
-1. THE SYSTEM SHALL crear con Terraform un user pool de Cognito (plan Essentials) en `sa-east-1` con el registro propio desactivado, MFA TOTP obligatorio, sin SMS y con protección contra borrado.
+1. THE SYSTEM SHALL crear con Terraform un user pool de Cognito (plan Essentials) en `us-east-1` con el registro propio desactivado, MFA TOTP obligatorio, sin SMS y con protección contra borrado.
 2. WHEN se da de alta al usuario propietario THEN the system SHALL permitirlo solo con credenciales de administrador y SHALL exigir que configure el TOTP en su primer inicio de sesión.
 3. THE SYSTEM SHALL crear un cliente público de la web, sin secreto, con el flujo de código de autorización con PKCE y con el dominio de CloudFront del sitio como URL de callback y de cierre de sesión.
 4. THE SYSTEM SHALL crear un cliente público del colector, sin secreto, con código de autorización y PKCE (S256), callback `http://localhost` según `T-7`, refresh token de 30 días, rotación activada y `RetryGracePeriodSeconds` fijado explícitamente.
@@ -63,7 +63,7 @@ registro, historial y web solo añadan funcionalidad. Materializa los ADR 0002, 
 
 #### Acceptance Criteria
 
-1. THE SYSTEM SHALL crear con Terraform una VPC en `sa-east-1` sin NAT Gateway ni ruta a internet desde sus subredes privadas, con un endpoint gateway de S3.
+1. THE SYSTEM SHALL crear con Terraform una VPC en `us-east-1` sin NAT Gateway ni ruta a internet desde sus subredes privadas, con un endpoint gateway de S3.
 2. THE SYSTEM SHALL crear un clúster Aurora PostgreSQL Serverless v2, versión 16.4 o superior, con `MinCapacity` 0, pausa automática tras 300 s, sin acceso público, cifrado con la clave KMS gestionada por AWS, backups de 7 días con recuperación a un punto en el tiempo, protección contra borrado y contraseña maestra gestionada por RDS en Secrets Manager.
 3. WHEN la Lambda se conecta a Aurora THEN the system SHALL usar TLS y autenticación IAM con un usuario de base de datos distinto del maestro y con solo los privilegios que la API necesita.
 4. WHEN la API atiende una petición que usa la base de datos THEN the system SHALL abrir una conexión y cerrarla al terminar, sin pool persistente ni RDS Proxy, para no impedir la pausa.
@@ -101,7 +101,7 @@ registro, historial y web solo añadan funcionalidad. Materializa los ADR 0002, 
 
 1. THE SYSTEM SHALL gestionar todos los recursos de AWS con Terraform, con el estado remoto en un bucket S3 cifrado con `use_lockfile = true`, incluidos el propio bucket de estado y el rol OIDC (bootstrap).
 2. THE SYSTEM SHALL etiquetar todos los recursos de AWS con `Environment`, `Project` y `Owner`.
-3. WHEN el gasto real o previsto del mes supera el 80 % de US$20 THEN the system SHALL enviar un aviso por correo desde AWS Budgets, medido sobre todo el gasto de la cuenta, que es exclusiva de monitorglucosa.
+3. WHEN el gasto real o previsto del mes supera el 80 % (US$16) o el 100 % (US$20) del presupuesto mensual de US$20 THEN the system SHALL enviar un aviso por correo desde AWS Budgets, medido sobre todo el gasto de la cuenta, que es exclusiva de monitorglucosa.
 4. WHEN la Lambda registra errores o API Gateway devuelve respuestas 5xx THEN the system SHALL disparar una alarma de CloudWatch que avisa por correo a una dirección configurada fuera del repositorio, sin ningún monitor que llame a la API de forma periódica.
 5. THE SYSTEM SHALL fijar en 30 días la retención de todos los grupos de logs de CloudWatch que crea esta spec.
 
@@ -109,7 +109,7 @@ registro, historial y web solo añadan funcionalidad. Materializa los ADR 0002, 
 
 1. THE SYSTEM SHALL mantener la cobertura de pruebas en ≥ 80 % en `domain` y `application`.
 2. THE SYSTEM SHALL responder `/health/ready` con 200 en ≤ 60 s sumando los reintentos cuando Aurora está en pausa (cada petición individual termina antes del límite de 30 s de API Gateway), y `GET /health` y `GET /api/v1/me` en p95 < 500 ms con la Lambda caliente.
-3. THE SYSTEM SHALL mantener el coste de la infraestructura de esta spec, con uso bajo, por debajo de US$20/mes, con una estimación contra los precios de `sa-east-1` antes del primer despliegue y la factura del primer mes como validación (`T-3`).
+3. THE SYSTEM SHALL mantener el coste de la infraestructura de esta spec, con uso bajo, por debajo de US$20/mes, con una estimación contra los precios de `us-east-1` antes del primer despliegue y la factura del primer mes como validación (`T-3`, ADR 0011).
 4. THE SYSTEM SHALL no tener ninguna política IAM con `Action: "*"` ni `Resource: "*"`, salvo las acciones que AWS no permite acotar a un recurso, listadas y justificadas en el diseño; una comprobación automática sobre el código de Terraform en CI lo verifica.
 5. THE SYSTEM SHALL no incluir secretos, tokens, datos de salud ni datos personales (incluido el correo de las alarmas) en el repositorio, las imágenes ni los logs; gitleaks y semgrep terminan sin hallazgos bloqueantes y el estado de Terraform no contiene la contraseña maestra de Aurora.
 6. THE SYSTEM SHALL documentar cada operación de la API en un contrato OpenAPI 3.1 con `operationId`, seguridad y todas las respuestas posibles con esquema y ejemplo, incluidas las que genera API Gateway, y CI SHALL fallar si `backend/openapi.json`, el contrato `openapi.yaml` de la spec, la referencia `docs/api/README.md` o las respuestas reales de la API dejan de ser conformes entre sí.
@@ -138,3 +138,4 @@ registro, historial y web solo añadan funcionalidad. Materializa los ADR 0002, 
 - 2026-11-01: ¿La spec documenta el contrato de la API? → Sí: contrato OpenAPI 3.1 de la spec (`openapi.yaml`), conforme con el que genera FastAPI, y referencia publicada en `docs/api/` (NFR-6).
 - 2026-11-01: Corrección de 2.3: AWS no documenta el código exacto que devuelve HTTP API por timeout ni el cuerpo de un rechazo IAM; la redacción ya no fija esos códigos y la verificación manual registra los observados.
 - 2026-11-02: El pipeline usa RDS Data API para el bootstrap SQL. ¿Contradice el Out of Scope? → No: queda fuera como ruta de datos de la API (ADR 0004); el pipeline la usa solo para crear roles, el esquema y permisos (D3, ADR 0007).
+- 2026-11-07: Sincronización con el steering actualizado (`/spec-sync`): cambio de región de AWS de `sa-east-1` a `us-east-1` (ADR 0011) manteniendo toda la arquitectura de ahorro (4.1, 5.1, NFR-3), y adición del segundo umbral de aviso al 100 % (US$20) junto al del 80 % (US$16) en AWS Budgets (8.3, `R6.2`).
