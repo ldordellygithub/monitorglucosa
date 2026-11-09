@@ -1,5 +1,7 @@
 """Router para la identidad del usuario actual."""
 
+from typing import Annotated
+
 from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict
 
@@ -16,6 +18,6 @@ class MeResponse(BaseModel):
 
 
 @router.get("/me", response_model=MeResponse)
-async def get_me(identity: Identity = current_identity) -> MeResponse:
+async def get_me(identity: Annotated[Identity, current_identity]) -> MeResponse:
     """Devuelve la identidad (claim `sub`) del usuario autenticado."""
     return MeResponse(sub=identity.subject)

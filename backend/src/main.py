@@ -22,7 +22,7 @@ def configure_logging(log_level: str) -> None:
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
 
-    for logger_name in ("api", "uvicorn.error"):
+    for logger_name in ("api", "uvicorn.error", "infrastructure"):
         log = logging.getLogger(logger_name)
         log.handlers = [handler]
         log.setLevel(log_level)

@@ -25,15 +25,16 @@ def request_id_of(scope: Scope) -> str:
     La cabecera `x-amzn-request-context` es el propio contexto de la petición en JSON
     (`requestId`, `authorizer`...). Un `x-request-id` enviado por el cliente se ignora.
     """
-    for name, value in scope["headers"]:
-        if name == b"x-amzn-request-context":
-            try:
-                candidate = json.loads(value)["requestId"]
-            except (ValueError, KeyError, TypeError):
-                break
-            if isinstance(candidate, str) and _REQUEST_ID.fullmatch(candidate):
-                return candidate
-            break
+    context_headers = [
+        val for name, val in scope["headers"] if name == b"x-amzn-request-context"
+    ]
+    if len(context_headers) == 1:
+        try:
+            candidate = json.loads(context_headers[0])["requestId"]
+        except (ValueError, KeyError, TypeError):
+            return str(uuid.uuid4())
+        if isinstance(candidate, str) and _REQUEST_ID.fullmatch(candidate):
+            return candidate
     return str(uuid.uuid4())
 
 

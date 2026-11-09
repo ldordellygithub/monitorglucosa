@@ -20,14 +20,21 @@ class ApiGatewayClaimsAuthenticator:
     """
 
     def authenticate(self, headers: Mapping[str, str]) -> Identity:
-        raw_context: str | None = None
-        for key, value in headers.items():
-            if key.lower() == "x-amzn-request-context":
-                raw_context = value
-                break
-
-        if not raw_context:
+        contexts = [
+            value
+            for key, value in headers.items()
+            if key.lower() == "x-amzn-request-context"
+        ]
+        if not contexts:
             raise UnauthenticatedError("Cabecera x-amzn-request-context ausente")
+        if len(contexts) > 1:
+            raise UnauthenticatedError(
+                "Múltiples cabeceras x-amzn-request-context detectadas"
+            )
+
+        raw_context = contexts[0]
+        if not raw_context:
+            raise UnauthenticatedError("Cabecera x-amzn-request-context vacía")
 
         try:
             data = json.loads(raw_context)
@@ -65,6 +72,27 @@ class ApiGatewayClaimsAuthenticator:
         return Identity(subject=sub.strip())
 
 
+def _extract_bearer_token(headers: Mapping[str, str]) -> str:
+    """Extrae el token Bearer de la cabecera Authorization."""
+    auth_header: str | None = None
+    for key, value in headers.items():
+        if key.lower() == "authorization":
+            auth_header = value
+            break
+
+    if not auth_header:
+        raise UnauthenticatedError("Cabecera Authorization ausente")
+
+    parts = auth_header.split(maxsplit=1)
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise UnauthenticatedError("Esquema de autorización inválido; se espera Bearer")
+
+    token = parts[1].strip()
+    if not token:
+        raise UnauthenticatedError("Token Bearer vacío")
+    return token
+
+
 class LocalJwksAuthenticator:
     """Autenticador para entornos local y de pruebas.
 
@@ -87,24 +115,7 @@ class LocalJwksAuthenticator:
         )
 
     def authenticate(self, headers: Mapping[str, str]) -> Identity:
-        auth_header: str | None = None
-        for key, value in headers.items():
-            if key.lower() == "authorization":
-                auth_header = value
-                break
-
-        if not auth_header:
-            raise UnauthenticatedError("Cabecera Authorization ausente")
-
-        parts = auth_header.split(maxsplit=1)
-        if len(parts) != 2 or parts[0].lower() != "bearer":
-            raise UnauthenticatedError(
-                "Esquema de autorización inválido; se espera Bearer"
-            )
-
-        token = parts[1].strip()
-        if not token:
-            raise UnauthenticatedError("Token Bearer vacío")
+        token = _extract_bearer_token(headers)
 
         try:
             signing_key = self._jwk_client.get_signing_key_from_jwt(token)
@@ -122,18 +133,24 @@ class LocalJwksAuthenticator:
                     "require": ["exp", "iss", "sub", "token_use"],
                 },
             )
+        except PyJWKClientError:
+            logger.warning("error resolviendo clave de firma con JWKS")
+            raise UnauthenticatedError("Error verificando claves con JWKS") from None
         except Exception as exc:
-            if isinstance(exc, (PyJWKClientError, Exception)):
-                logger.error(
-                    "error validando token o conectando con JWKS", exc_info=exc
-                )
             raise UnauthenticatedError("Token inválido o expirado") from exc
 
         token_client = payload.get("client_id")
         if token_client is None:
             token_client = payload.get("aud")
 
-        if token_client not in self._client_ids:
+        if isinstance(token_client, str):
+            client_match = token_client in self._client_ids
+        elif isinstance(token_client, (list, tuple)):
+            client_match = any(c in self._client_ids for c in token_client)
+        else:
+            client_match = False
+
+        if not client_match:
             raise UnauthenticatedError(f"client_id {token_client!r} no autorizado")
 
         claim_use = payload.get("token_use")

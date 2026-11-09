@@ -115,6 +115,24 @@ def test_prod_autenticador_admite_request_context_envolvente() -> None:
 
 
 @pytest.mark.req("fase-1a:3.2")
+def test_prod_autenticador_rechaza_claves_intermedias_ausentes() -> None:
+    auth = ApiGatewayClaimsAuthenticator()
+    # Sin authorizer
+    with pytest.raises(UnauthenticatedError):
+        auth.authenticate({"x-amzn-request-context": json.dumps({})})
+
+    # Sin jwt
+    with pytest.raises(UnauthenticatedError):
+        auth.authenticate({"x-amzn-request-context": json.dumps({"authorizer": {}})})
+
+    # Sin claims
+    with pytest.raises(UnauthenticatedError):
+        auth.authenticate(
+            {"x-amzn-request-context": json.dumps({"authorizer": {"jwt": {}}})}
+        )
+
+
+@pytest.mark.req("fase-1a:3.2")
 def test_prod_autenticador_rechaza_cabecera_ausente_o_vacia() -> None:
     auth = ApiGatewayClaimsAuthenticator()
     with pytest.raises(UnauthenticatedError):
@@ -187,6 +205,32 @@ def test_local_autenticador_acepta_token_valido(
     token = make_token(priv, sub="local-user-1")
     identity = auth.authenticate({"Authorization": f"Bearer {token}"})
     assert identity == Identity(subject="local-user-1")
+
+
+@pytest.mark.req("fase-1a:3.3")
+def test_local_autenticador_acepta_aud_como_lista(
+    rsa_keys: tuple[rsa.RSAPrivateKey, Any],
+) -> None:
+    priv, pub = rsa_keys
+    auth = LocalJwksAuthenticator(
+        issuer="http://jwt-issuer:9000",
+        jwks_url="http://jwt-issuer:9000/.well-known/jwks.json",
+        client_ids=["web", "collector"],
+        jwk_client=DummyJWKClient(pub),  # type: ignore[arg-type]
+    )
+    # Token sin client_id pero con aud = ["app", "web"]
+    now = int(time.time())
+    payload = {
+        "sub": "user-list-aud",
+        "iss": "http://jwt-issuer:9000",
+        "aud": ["other-app", "web"],
+        "token_use": "access",
+        "iat": now,
+        "exp": now + 3600,
+    }
+    token = jwt.encode(payload, priv, algorithm="RS256", headers={"kid": "k1"})
+    identity = auth.authenticate({"Authorization": f"Bearer {token}"})
+    assert identity.subject == "user-list-aud"
 
 
 @pytest.mark.req("fase-1a:3.3")
