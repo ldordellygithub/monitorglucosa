@@ -51,7 +51,7 @@ runbook del diseño, no son tareas de código.
   - [x] 7.2 Prueba basada en propiedades: los logs no contienen credenciales ni contenido
     - _Property: 4_
     - _Requirements: 2.4, NFR-5_
-- [ ] 8. Implementar la autenticación: puerto, dos adaptadores y `GET /api/v1/me`
+- [x] 8. Implementar la autenticación: puerto, dos adaptadores y `GET /api/v1/me`
   - `Identity`, `Authenticator`, `ApiGatewayClaimsAuthenticator`, `LocalJwksAuthenticator` (PyJWT), `current_identity`
     y el router `me`; selección por `ENVIRONMENT` en `create_app`. Ambos exigen `token_use = access`. Prueba de que, con
     `ENVIRONMENT = prod`, `create_app` nunca construye `LocalJwksAuthenticator` (la otra mitad de 3.4; `Settings` ya
@@ -65,10 +65,10 @@ runbook del diseño, no son tareas de código.
     `x-request-id`, escriben su línea de log, y `uvicorn.error` usa `JsonFormatter`. Se repite la prueba de la
     Property 4 con una ruta autenticada, para que los claims (`x-amzn-request-context`) tampoco aparezcan en el log.
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
-  - [ ] 8.1 Prueba basada en propiedades: la autenticación en `prod` falla cerrada
+  - [x] 8.1 Prueba basada en propiedades: la autenticación en `prod` falla cerrada
     - _Property: 2_
     - _Requirements: 3.1, 3.2_
-  - [ ] 8.2 Prueba basada en propiedades: un token alterado nunca autentica en local
+  - [x] 8.2 Prueba basada en propiedades: un token alterado nunca autentica en local
     - _Property: 3_
     - _Requirements: 3.3_
 - [ ] 9. Implementar `/health`, `/health/ready` y el acceso async a PostgreSQL

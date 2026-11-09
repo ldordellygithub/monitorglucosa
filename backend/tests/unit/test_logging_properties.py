@@ -4,12 +4,16 @@ import json
 import string
 
 import pytest
+from fastapi.testclient import TestClient
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+from src.main import create_app
 from tests.unit.probe_app import captured_logs, probe_client
+from tests.unit.settings_env import build_settings, prod_env
 
 CLIENT = probe_client()
+PROD_CLIENT = TestClient(create_app(build_settings(prod_env())))
 
 ALLOWED_FIELDS = {
     "timestamp",
@@ -90,4 +94,49 @@ def test_logs_nunca_contienen_valores_de_la_peticion_y_solo_los_campos_permitido
     assert len(lines) == 5  # una por petición, más la del error no controlado
     assert all(set(line) <= ALLOWED_FIELDS for line in lines)
     assert all(line["request_id"] == LAMBDA_REQUEST_ID for line in lines)
+    assert not any(value in stream.getvalue() for value in injected)
+
+
+@pytest.mark.req("fase-1a:2.4", "fase-1a:NFR-5")
+@settings(deadline=None)
+@given(
+    claim_subject=VALUES,
+    claim_client=VALUES,
+    authorization=VALUES,
+    client_request_id=VALUES,
+)
+def test_logs_ruta_autenticada_nunca_contienen_claims_ni_credenciales(
+    claim_subject: str,
+    claim_client: str,
+    authorization: str,
+    client_request_id: str,
+) -> None:
+    headers = {
+        "authorization": f"Bearer {authorization}",
+        "x-request-id": client_request_id,
+        "x-amzn-request-context": json.dumps(
+            {
+                "requestId": LAMBDA_REQUEST_ID,
+                "authorizer": {
+                    "jwt": {
+                        "claims": {
+                            "sub": claim_subject,
+                            "client_id": claim_client,
+                            "token_use": "access",
+                        }
+                    }
+                },
+            }
+        ),
+    }
+    injected = [claim_subject, claim_client, authorization, client_request_id]
+
+    with captured_logs() as stream:
+        response = PROD_CLIENT.get("/api/v1/me", headers=headers)
+
+    assert response.status_code == 200
+    [line] = [json.loads(line_text) for line_text in stream.getvalue().splitlines()]
+    assert set(line) <= ALLOWED_FIELDS
+    assert line["request_id"] == LAMBDA_REQUEST_ID
+    assert line["route"] == "/api/v1/me"
     assert not any(value in stream.getvalue() for value in injected)
