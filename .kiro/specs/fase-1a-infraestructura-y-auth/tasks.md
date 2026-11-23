@@ -78,7 +78,7 @@ runbook del diseño, no son tareas de código.
   - Pruebas de integración con PostgreSQL 16 real: `/health` responde 200 con la base de datos inaccesible;
     `/health/ready` responde 200 o 503.
   - _Requirements: 2.1, 2.2, 5.3, 5.4, NFR-2_
-- [ ] 10. Crear `bootstrap.sql`, la base de Alembic y la app del `migrator`
+- [x] 10. Crear `bootstrap.sql`, la base de Alembic y la app del `migrator`
   - `scripts/sql/bootstrap.sql` como un único bloque `DO $$ … $$` idempotente (roles `mg_migrator` y `mg_api`, esquema
     `app`, privilegios por defecto), Alembic async con `version_table_schema = "app"`, revisión base vacía con
     `upgrade` y `downgrade`, y `create_migrator_app` (`POST /events`, `GET /`).
