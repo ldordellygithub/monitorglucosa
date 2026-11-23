@@ -6,6 +6,7 @@ from fastapi import Depends, Request
 
 from src.application.identity import Identity
 from src.application.ports import Authenticator
+from src.application.readiness import CheckReadiness
 
 
 def get_authenticator(request: Request) -> Authenticator:
@@ -25,3 +26,11 @@ def get_current_identity(
 
 
 current_identity = Depends(get_current_identity)
+
+
+def get_check_readiness(request: Request) -> CheckReadiness:
+    """Obtiene el caso de uso CheckReadiness configurado en app.state."""
+    readiness = getattr(request.app.state, "readiness", None)
+    if readiness is None:
+        raise RuntimeError("CheckReadiness no configurado en app.state")
+    return readiness  # type: ignore[no-any-return]

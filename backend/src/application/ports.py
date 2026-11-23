@@ -17,3 +17,16 @@ class Authenticator(Protocol):
                 los permisos necesarios.
         """
         ...
+
+
+class DatabaseProbe(Protocol):
+    """Puerto de comprobación de conectividad con la base de datos."""
+
+    async def check(self) -> None:
+        """Comprueba que la base de datos responde.
+
+        Raises:
+            DatabaseUnavailableError: si la base de datos no responde o la
+                conexión falla.
+        """
+        ...

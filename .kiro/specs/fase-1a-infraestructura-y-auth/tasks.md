@@ -71,7 +71,7 @@ runbook del diseño, no son tareas de código.
   - [x] 8.2 Prueba basada en propiedades: un token alterado nunca autentica en local
     - _Property: 3_
     - _Requirements: 3.3_
-- [ ] 9. Implementar `/health`, `/health/ready` y el acceso async a PostgreSQL
+- [x] 9. Implementar `/health`, `/health/ready` y el acceso async a PostgreSQL
   - `DatabaseConfig` (clase de `infrastructure` que construye `main.py` desde `Settings`) y `create_engine` con asyncpg y `NullPool` (contraseña en local, token IAM firmado por boto3 en `prod`, TLS
     `verify-full` con el bundle de CA de RDS, `connect_timeout` de 20 s), `SqlDatabaseProbe`, `CheckReadiness` y el 503
     `DATABASE_UNAVAILABLE` con `Retry-After: 5`.
