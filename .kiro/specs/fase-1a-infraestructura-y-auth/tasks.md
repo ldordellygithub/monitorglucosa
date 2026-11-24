@@ -103,7 +103,7 @@ runbook del diseño, no son tareas de código.
   - Pruebas de punta a punta contra Compose: `up --wait` y `/health`; la imagen responde con el `CMD` de Lambda; un
     `.env` ficticio no entra en la imagen; `GET /api/v1/me` con un token del emisor → 200 y con uno alterado → 401.
   - _Requirements: 1.1, 1.2, 1.3, 3.3_
-- [ ] 13. Checkpoint: ejecutar las pruebas del backend, `ruff`, `mypy`, `lint-imports` y `kspec trace`
+- [x] 13. Checkpoint: ejecutar las pruebas del backend, `ruff`, `mypy`, `lint-imports` y `kspec trace`
   - Cobertura ≥ 80 % en `domain` y `application` con `pytest --cov` (el umbral solo actúa con esa opción); matriz generada sin pruebas huérfanas.
 
 ## Despliegue e infraestructura
