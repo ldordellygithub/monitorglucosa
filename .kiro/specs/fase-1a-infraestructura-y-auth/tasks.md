@@ -120,7 +120,7 @@ runbook del diseño, no son tareas de código.
     bucket del estado, proveedor OIDC, rol `monitorglucosa-deploy` con su política (`aws:RequestedRegion = us-east-1`, ADR 0008, ADR 0011) y el *permissions boundary*, y ECR
     (etiquetas inmutables, escaneo, 10 imágenes). `terraform test` con proveedores simulados.
   - _Requirements: 6.1, 7.2, 8.1, 8.2_
-- [ ] 16. Crear los módulos `network` y `database`
+- [x] 16. Crear los módulos `network` y `database`
   - VPC en `us-east-1` (`us-east-1a` y `us-east-1b`) sin NAT ni IGW, endpoint gateway de S3, grupos de seguridad, Aurora PostgreSQL Serverless v2 (0–2 ACU, pausa de
     300 s, TLS forzado, IAM, Data API, backups de 7 días, protección contra borrado, contraseña gestionada por RDS).
   - _Requirements: 5.1, 5.2, 5.5_

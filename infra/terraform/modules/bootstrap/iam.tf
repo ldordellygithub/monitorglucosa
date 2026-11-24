@@ -38,6 +38,13 @@ resource "aws_iam_openid_connect_provider" "github" {
   client_id_list = ["sts.amazonaws.com"]
 }
 
+# Rol vinculado al servicio RDS creado durante el bootstrap local con credenciales de
+# administrador (evita conceder iam:CreateServiceLinkedRole a monitorglucosa-deploy).
+resource "aws_iam_service_linked_role" "rds" {
+  aws_service_name = "rds.amazonaws.com"
+  description      = "Service-linked role requerido por Aurora PostgreSQL Serverless v2."
+}
+
 # ---------------------------------------------------------------------------
 # Permissions boundary obligatorio para roles creados por Terraform (ADR 0008)
 # ---------------------------------------------------------------------------
@@ -281,12 +288,18 @@ resource "aws_iam_policy" "deploy_core" {
           "iam:GetOpenIDConnectProvider",
           "iam:GetPolicy",
           "iam:GetPolicyVersion",
+          "iam:GetRole",
+          "iam:ListAttachedRolePolicies",
+          "iam:ListInstanceProfilesForRole",
           "iam:ListPolicyVersions",
+          "iam:ListRolePolicies",
         ]
         Resource = [
           local.oidc_provider_arn,
           local.boundary_arn,
           local.deploy_policy_arn_pattern,
+          local.deploy_role_arn,
+          "arn:aws:iam::${var.account_id}:role/aws-service-role/rds.amazonaws.com/AWSServiceRoleForRDS",
         ]
         Condition = local.region_condition
       },
@@ -455,9 +468,36 @@ resource "aws_iam_policy" "deploy_infra_core" {
           "arn:aws:rds:${var.region}:${var.account_id}:cluster:${var.project}-*",
           "arn:aws:rds:${var.region}:${var.account_id}:cluster-pg:${var.project}-*",
           "arn:aws:rds:${var.region}:${var.account_id}:db:${var.project}-*",
+          "arn:aws:rds:${var.region}:${var.account_id}:og:default:aurora-postgresql-16",
+          "arn:aws:rds:${var.region}:${var.account_id}:pg:default.aurora-postgresql16",
           "arn:aws:rds:${var.region}:${var.account_id}:subgrp:${var.project}-*",
         ]
         Condition = local.region_condition
+      },
+      {
+        Sid    = "ManageAuroraManagedMasterSecret"
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:CreateSecret",
+          "secretsmanager:TagResource",
+        ]
+        Resource  = ["arn:aws:secretsmanager:${var.region}:${var.account_id}:secret:rds!cluster-*"]
+        Condition = local.region_condition
+      },
+      {
+        Sid      = "DescribeKmsKeyForRdsManagedSecret"
+        Effect   = "Allow"
+        Action   = ["kms:DescribeKey"]
+        Resource = ["arn:aws:kms:${var.region}:${var.account_id}:key/*"]
+        Condition = {
+          StringEquals = {
+            "kms:ViaService" = [
+              "secretsmanager.${var.region}.amazonaws.com",
+              "rds.${var.region}.amazonaws.com",
+            ]
+            "aws:RequestedRegion" = var.region
+          }
+        }
       },
       {
         Sid    = "ManageProjectLambdas"
@@ -708,6 +748,7 @@ resource "aws_iam_policy" "deploy_read" {
           "cloudwatch:DescribeAlarms",
           "cognito-idp:ListUserPools",
           "ec2:DescribeAvailabilityZones",
+          "ec2:DescribeNetworkAcls",
           "ec2:DescribeNetworkInterfaces",
           "ec2:DescribePrefixLists",
           "ec2:DescribeRouteTables",

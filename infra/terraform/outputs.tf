@@ -28,6 +28,30 @@ output "ecr_repository_arn" {
   sensitive   = true
 }
 
+output "cluster_arn" {
+  description = "ARN del clúster Aurora PostgreSQL Serverless v2 (usado por scripts/deploy.py y db_bootstrap.py)."
+  value       = module.database.cluster_arn
+  sensitive   = true
+}
+
+output "master_secret_arn" {
+  description = "ARN del secreto maestro gestionado por RDS en Secrets Manager (usado por RDS Data API)."
+  value       = module.database.master_secret_arn
+  sensitive   = true
+}
+
+output "cluster_endpoint" {
+  description = "Endpoint writer de Aurora PostgreSQL dentro de la VPC privada."
+  value       = module.database.cluster_endpoint
+  sensitive   = true
+}
+
+output "cluster_resource_id" {
+  description = "ID de recurso de Aurora (db-...) para acotar rds-db:connect."
+  value       = module.database.cluster_resource_id
+  sensitive   = true
+}
+
 output "api_image_digest" {
   description = "Digest sha256 actualmente desplegado en la Lambda api (vacío antes del primer despliegue para que deploy.py detecte primer_despliegue=si)."
   value       = var.api_image_digest != null ? var.api_image_digest : ""
