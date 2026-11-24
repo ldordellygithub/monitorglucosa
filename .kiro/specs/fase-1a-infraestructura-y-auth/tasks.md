@@ -136,7 +136,7 @@ runbook del diseño, no son tareas de código.
 - [x] 19. Crear el módulo `operations`
   - Tema SNS, las cuatro alarmas, presupuesto de US$20 con avisos al 80 % (US$16) y al 100 % (US$20) y retención de 30 días en los grupos de logs.
   - _Requirements: 8.3, 8.4, 8.5, NFR-3_
-- [ ] 20. Checkpoint: `terraform fmt -check`, `validate`, `terraform test` y checkov en verde
+- [x] 20. Checkpoint: `terraform fmt -check`, `validate`, `terraform test` y checkov en verde
 
 ## Pipeline y documentación
 
