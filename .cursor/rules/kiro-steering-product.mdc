@@ -9,143 +9,181 @@ alwaysApply: true
 > **Cómo leer este documento.** Cada afirmación es **Decidido** salvo que se marque como
 > *Propuesto* (recomendación pendiente de aprobar) o figure en [Decisiones abiertas](#decisiones-abiertas).
 > Un agente no debe tratar una propuesta como decisión ni resolver una decisión abierta por su cuenta:
-> debe preguntar o citar el ID (`P-n`). Los IDs `T-n` están en [tech.md](tech.md#decisiones-abiertas).
+> debe preguntar o citar el ID (`P-n` o `D-n`). Los IDs `T-n` están en [tech.md](tech.md#decisiones-abiertas).
 
 ## Visión
 
-Llevar el control personal de la glucosa con un sistema propio: las mediciones del glucómetro
-GlucoQuick GD50 se sincronizan por Bluetooth, se guardan con su historial y se visualizan. En fases
-posteriores se analizan con integraciones y AI (fase 4) y se consultan desde una app móvil (fase 5). *(Decidido)*
+MonitorGlucosa es una plataforma personal para la gestión integral de la diabetes que centraliza en un único lugar mediciones de glucosa del glucómetro GlucoQuick GD50, aplicaciones e inventario de insulina, anotaciones categorizadas, avisos y análisis histórico bajo el control exclusivo de su titular. MonitorGlucosa proporciona avisos y análisis basados en las lecturas sincronizadas, visibles en la web y en el entorno local del usuario, y genera informes clínicos verificables sin emitir diagnósticos ni recomendaciones de tratamiento. En fases posteriores (post-MVP) se amplía con sensores de monitoreo continuo de glucosa (CGM, `D-3`), resúmenes e integraciones con IA sobre agregados anonimizados (fase 4, `P-1` y `P-3`) y consulta/registro desde una app móvil Expo / React Native (fase 5, `T-8` y `P-5`). *(Decidido)*
 
 ## Problema
 
-Las mediciones quedan en el medidor o en su app de origen, sin un historial propio, consultable,
-exportable y con alertas configurables, ni un resumen para llevar al médico. *(Decidido)*
+Hasta hoy, las mediciones quedan atrapadas en la memoria interna limitada del glucómetro GD50 (actualmente con 451 registros y riesgo de sobrescritura circular irreversible al llenarse) o en su app de origen, sin un historial propio, consultable, exportable y con alertas configurables; las dosis y el stock de insulina carecen de registro estructurado; los eventos que explican variaciones glucémicas se olvidan a los pocos días; y las consultas con los especialistas se atienden sin un historial consolidado de varios meses. La mayor frustración es la pérdida irreversible de contexto histórico: no poder reconstruir qué ocurría semanas o meses atrás para descubrir patrones de comportamiento de la diabetes junto al equipo médico. *(Decidido)*
+
+## Contexto de negocio
+
+- **Naturaleza del proyecto:** estrictamente personal y monousuario (`R1.7`). No es un producto comercial ni forma parte del portafolio de servicios a terceros de Zenthia Studio S.A.S. *(Decidido)*
+- **Por qué ahora:** (1) riesgo inmediato de pérdida de las 451 lecturas históricas acumuladas en el GD50; (2) el historial ya tiene valor clínico para las próximas consultas; (3) las consultas médicas exigen información organizada; (4) el titular dispone hoy del dominio técnico (AWS, FastAPI, BLE, Clean Architecture) y de un extractor BLE funcional; y (5) necesita integrar en una misma línea temporal glucosa, insulina, inventario y eventos. *(Decidido)*
+- **Sostenibilidad:** se sostiene indefinidamente con presupuesto personal mientras el coste mensual en AWS (`us-east-1`) se mantenga en `< US$20/mes`, el mantenimiento sea asumible en tiempo parcial (`10 h/semana`) y aporte utilidad directa en las consultas médicas y como evidencia práctica de ingeniería de sistemas. *(Decidido)*
 
 ## Usuarios
 
 | Perfil | Necesidad principal | Cómo usa el producto |
 | --- | --- | --- |
-| Usuario propietario (Luis) | Ver su historial y tendencias de glucosa | Web (Next.js) + colector BLE local; app móvil desde la fase 5 |
-| Médico del usuario (no es usuario del sistema) | Revisar un resumen del periodo | Recibe el informe PDF que genera el usuario |
+| Usuario propietario (Luis, 1 usuario hoy y a 12 meses) | Centralizar lecturas del GD50, registrar dosis e inventario de insulina, anotar contexto, detectar patrones objetivos, recibir avisos diferidos al sincronizar o abrir la web y llevar un informe consolidado al 100 % de sus consultas médicas | Aplicación web (Next.js) en sesiones breves (1–3 veces/día, 30 s a 2 min, 2–5 acciones) + colector BLE local en portátil Ubuntu (sincronización manual en lote cada 2–3 días, habitualmente de noche); app móvil desde la fase 5 |
+| Profesionales de salud: endocrinólogo, oftalmólogo, médico general y odontólogo (no son usuarios del sistema) | Revisar un resumen histórico autoexplicativo del período (tendencias, estadísticas descriptivas, episodios fuera de rango, dosis registradas y anotaciones relevantes) | Reciben un formato único de informe PDF descargado y entregado por el titular en las 3 o 4 consultas anuales |
 
-- Uso personal: un solo usuario. Sin multi-tenant ni cuentas de terceros en el MVP. *(Decidido)*
-- El médico no tiene acceso al sistema; solo recibe el PDF que el usuario descarga y le entrega. *(Decidido)*
+- Uso personal: un solo usuario. Sin multi-tenant, roles, portales médicos, enlaces públicos ni cuentas de terceros en el MVP. *(Decidido)*
+- Ningún profesional de salud tiene acceso al sistema; solo recibe el informe PDF único y autoexplicativo que genera y le entrega el titular. *(Decidido)*
+
+## Partes interesadas
+
+| Rol | Persona o entidad | Qué espera o qué aprueba |
+| --- | --- | --- |
+| Patrocinador y propietario del presupuesto | Titular (100 % personal, `< US$20/mes`, cuenta AWS dedicada) | Financiar la operación en AWS y validar el retorno personal (consultas médicas con informe) y de portafolio técnico |
+| Propietario de producto y aprobador único | Titular | Definir alcance y prioridades, y aprobar specs, ADRs, cambios arquitectónicos, PRs y despliegues a `prod` |
+| Operador, administrador y soporte | Titular (noches, fines de semana y tiempo libre; sin soporte 24/7) | Mantenimiento, despliegues, atención de alarmas (AWS Budgets y CloudWatch) y procedimientos de recuperación |
+| Validadores clínicos externos (sin acceso al sistema) | Endocrinólogo, oftalmólogo, médico general y odontólogo | Recibir el informe PDF en consulta; el médico tratante valida fuera del sistema los umbrales por defecto (`P-2`, `D-2`) |
 
 ## Casos de uso principales
 
-1. **Sincronizar** las mediciones del GD50 por Bluetooth con su contexto, salvo medicación, sin duplicar las ya guardadas. *(fase 1)*
-2. **Registrar** una medición a mano como respaldo cuando no hay dispositivo. Las manuales se editan y borran con confirmación; las BLE no se editan. *(fase 1)*
-3. **Consultar** el historial y las tendencias por periodo, con gráficas, en mg/dL o mmol/L. *(fase 1)*
-4. **Configurar** umbrales de hipoglucemia e hiperglucemia y recibir un aviso cuando una lectura los cruza. *(fase 2)*
-5. **Anotar** a mano comidas e insulina o medicación, sin recomendaciones ni cálculos (`P-5`). *(fase 3)*
-6. **Generar** un informe PDF de un periodo con promedios y eventos fuera de rango, y **exportar** todas las lecturas y anotaciones en CSV. *(fase 3)*
-7. **Analizar** las mediciones con estadística local (promedios, variabilidad, % de lecturas en rango) e integraciones y AI. *(fase 4; `P-1`, y `P-3` para terceros)*
-8. **Consultar y registrar** desde una app móvil Expo / React Native, como cliente de la API. *(fase 5; `T-8`)*
-9. **Leer** explicaciones informativas de sus tendencias, con descargo visible. Sin diagnóstico ni dosis. *(fase 5; `P-5`)*
+1. **Sincronizar e importar** las mediciones del GD50 con su contexto GLS (`0x2A34`, salvo medicación) tanto por Bluetooth en vivo como desde el archivo de respaldo local de las 451 lecturas históricas, unificados bajo la misma clave de idempotencia (`T-9`) sin duplicados ni pérdidas. *(fase 1)*
+2. **Registrar** una medición de glucemia a mano como respaldo cuando no está el dispositivo. Las lecturas manuales se editan y borran con confirmación; las lecturas BLE son inmutables y las de solución de control se guardan marcadas fuera de estadísticas, alertas e informes. *(fase 1)*
+3. **Consultar** el historial y las tendencias por rango de fechas, con gráficas y filtros por tipo de evento, visualizando en mg/dL o mmol/L. *(fase 1)*
+4. **Registrar aplicaciones de insulina** mediante botón de acceso rápido (incluyendo registros retroactivos con su fecha y hora reales), consultar su historial con filtros por tipo de insulina y editar o eliminar registros con confirmación explícita. *(fase 2)*
+5. **Anotar eventos de contexto** con fecha y hora, categoría (`medicación` exclusivamente para fármacos distintos de la insulina, comidas, ejercicio o situaciones atípicas), descripción y nivel de importancia, editables y eliminables con confirmación; en el cierre del MVP se amplían con etiquetas, vista de tarjetas tipo Notion y búsqueda avanzada. *(fases 2 y 3)*
+6. **Generar un informe PDF único** autoexplicativo para los cuatro especialistas con la línea temporal de lecturas, dosis y anotaciones más estadística descriptiva (`a1+`, [ADR 0010](../../docs/adr/0010-descriptive-statistics-without-clinical-recommendations.md)), y **exportar** los datos en CSV y Excel (`.xlsx`), admitiendo ejecución por CLI si algún flujo web aún no está publicado en el corte de febrero de 2027. *(fases 2 y 3)*
+7. **Gestionar el inventario de insulina** acoplado al registro de dosis: registrar compras o saldo inicial, descontar automáticamente las unidades aplicadas al crear/editar/borrar una dosis, permitir ajustes manuales por conteo físico (que actúan como punto de corte contable `T_conteo`) y mostrar estimaciones informativas de saldo y duración junto con avisos de stock bajo. *(fase 3)*
+8. **Configurar umbrales y recibir avisos diferidos** en la web y en el escritorio del colector: avisos por lecturas que cruzan los umbrales de hipoglucemia o hiperglucemia (incluidas las históricas), avisos de stock de insulina y **aviso por falta de medición sincronizada** («no hay lecturas sincronizadas en las últimas 24 h», configurable en 12, 24, 48 h o personalizado, evaluado al abrir la web o al sincronizar). *(fase 3)*
+9. **Analizar el historial glucémico** mediante comparación entre periodos, porcentaje de tiempo en rango y fuera de rango, tendencias crecientes/decrecientes, distribución en seis bloques fijos de 4 horas (`00:00–03:59`, `04:00–07:59`, `08:00–11:59`, `12:00–15:59`, `16:00–19:59`, `20:00–23:59`) en la zona horaria activa del usuario y un **motor de detección de patrones** con tres reglas objetivas sin constantes clínicas codificadas. *(fase 3)*
+10. **Exportar la totalidad de las entidades** (lecturas, insulina, inventario, anotaciones, patrones e informes) en CSV, `.xlsx` y PDF antes de ejecutar el borrado inmediato en AWS si el titular decide abandonar el sistema. *(fase 3)*
+11. **Integrar fuentes posteriores y resúmenes con IA** (sensores CGM sujetos a `D-3`, resúmenes con LLM y exportaciones o avisos externos sobre agregados anonimizados según `P-1` y `P-3`), **consultar y registrar desde una app móvil** Expo / React Native (`T-8`) y **leer explicaciones informativas de tendencias** con descargo visible sin diagnóstico ni dosis (`P-5`). *(fases 4 y 5, post-MVP)*
 
 ## Principios de producto
 
-- **Un usuario primero.** Ninguna decisión de diseño añade multi-tenant ni roles hasta que haya un caso real. *(Decidido: uso personal)*
-- **Datos de salud tratados como sensibles.** Mínimo necesario, cifrados en reposo y en tránsito, nunca en logs. Marco de referencia: Ley 1581/2012 (Colombia), adoptada voluntariamente: una base de ámbito personal está exceptuada (art. 2 lit. a), aunque sus principios aplican (C-748/2011). Es obligatoria si los datos se entregan a terceros o el uso deja de ser personal; entonces se revisa también la transferencia internacional (los datos viven en Brasil). *(Decidido)*
-- **Sin diagnóstico, tratamiento ni dosis, en ninguna fase.** Las alertas y la información informan; no indican qué hacer con la medicación. Las dosis anotadas se muestran tal cual, sin cálculos derivados. *(Decidido; alcance de la fase 5 en `P-5`)*
-- **El dispositivo es la fuente de la medición.** El sistema no corrige ni recalcula valores: valida, guarda y deduplica. Los registros inválidos se descartan y las lecturas de control se guardan marcadas, fuera de estadísticas y alertas. *(Decidido)*
-- **Cada fase entrega algo usable.** Una fase no empieza hasta que la anterior cumple su criterio de "hecho". *(Decidido)*
-- **Los clientes no tienen reglas de negocio.** El colector, la web y la app móvil consumen la API. *(Decidido)*
+- **Un usuario primero.** Ninguna decisión de diseño añade multi-tenant, roles ni cuentas de terceros hasta que exista un caso real. *(Decidido: uso personal)*
+- **Integridad y trazabilidad por encima de todo.** Jerarquía ante fallos: `Integridad > Pérdida > Filtración > Indisponibilidad`. Todo dato o cálculo cuya integridad no pueda garantizarse debe fallar explícitamente o rechazarse antes que mostrarse como válido, y cada cifra de la web o del informe PDF debe poder trazarse a los registros que la originan. *(Decidido)*
+- **Datos de salud tratados como sensibles y en `us-east-1`.** Mínimo necesario, cifrados en reposo (KMS) y en tránsito (TLS), nunca en logs. Marco voluntario de referencia: Ley 1581/2012 (Colombia), adoptada voluntariamente: una base de ámbito personal está exceptuada (art. 2 lit. a), aunque sus principios aplican (C-748/2011). Es obligatoria si los datos se entregan a terceros o el uso deja de ser personal; entonces se revisa también la transferencia internacional. Toda la infraestructura y almacenamiento en la nube viven exclusivamente en AWS `us-east-1` ([ADR 0011](../../docs/adr/0011-aws-region-us-east-1-for-cost-optimization.md)). *(Decidido)*
+- **Repositorio público con doble barrera de privacidad.** Ningún dato clínico real, respaldo local (incluidas las 451 lecturas del GD50), exportación (CSV, `.xlsx`, PDF) ni captura real entra jamás en Git ni en CI/CD; se almacenan fuera del árbol del repositorio bajo cifrado del sistema operativo o del disco. La documentación pública expresa el uso únicamente como parámetros de carga y dimensionamiento del sistema. *(Decidido)*
+- **Hechos y estadística descriptiva (`a1+`), nunca diagnóstico ni recomendación clínica (`P-5`).** El sistema muestra registros propios, estadística descriptiva verificable (conteo de dosis, días con registro desglosados objetivamente por número de aplicaciones diarias en `0, 1, 2, 3+`, días sin registro, intervalo entre dosis, suma de unidades, promedios, extremos y, en fase 3, tiempo en rango y distribución por bloques de 4 h), estimaciones informativas de saldo de inventario y patrones objetivos sobre los umbrales configurados por el usuario, siempre con descargo visible ([ADR 0010](../../docs/adr/0010-descriptive-statistics-without-clinical-recommendations.md)). Quedan prohibidos en todas las fases el diagnóstico, el cálculo de adherencia frente a una pauta prescrita, la evaluación de efectividad terapéutica y cualquier sugerencia de dosis. *(Decidido)*
+- **El dispositivo y los registros propios son la fuente de verdad.** El sistema no corrige ni recalcula valores de medición: valida, guarda y deduplica. Las lecturas BLE no se editan; los registros inválidos se descartan y las lecturas de solución de control se marcan y excluyen de estadísticas, alertas e informes. La categoría «medicación» de las anotaciones excluye estrictamente la insulina para evitar duplicidades con el módulo de insulina (`Q-r`). *(Decidido)*
+- **Cada fase entrega algo usable y las dependencias externas no congelan el avance del MVP (`R4.1`).** Una fase no empieza hasta que la anterior cumple su criterio de «hecho». Una dependencia externa como la validación médica de umbrales (`P-2`, `D-2`) solo bloquea el cierre formal de dicha validación personalizada; el diseño y la implementación avanzan usando umbrales configurables por el usuario y valores iniciales de una guía clínica citada con descargo visible de «pendiente de validación médica personalizada». *(Decidido)*
+- **Los clientes no tienen reglas de negocio.** El colector, la web y la futura app móvil consumen `/api/v1`. *(Decidido)*
 
 ## Alcance del MVP
 
-Entrega por fases; cada fase tiene una o más specs en `.kiro/specs/` y su "hecho" se mide al cerrar todas. El MVP es la fase 1 a la 3;
-las fases 4 y 5 vienen después.
-La solicitud original pedía un MVP "robusto con múltiples integraciones y AI"; el MVP se acota
-a las fases 1–3 y las integraciones y AI pasan a fase 4, para llegar a un producto usable antes.
-*(Decidido: Luis aprobó el recorte.)*
+Entrega por fases; cada fase tiene una o más specs en `.kiro/specs/` y su criterio de «hecho» se verifica al cerrar todas sus specs. El MVP comprende las fases 1 a 3 (reordenadas según las prioridades del descubrimiento y los hitos de febrero de 2027 y noviembre de 2027); las fases 4 y 5 vienen después (post-MVP). La solicitud original pedía un MVP «robusto con múltiples integraciones y AI»; el MVP se acotó a las fases 1–3 y las integraciones con terceros y AI avanzada pasaron a la fase 4 para llegar a un producto usable antes. *(Decidido)*
 
-| Fase | Capacidad | Incluye | Criterio de "hecho" |
+| Fase | Capacidad e hito | Incluye | Criterio de «hecho» |
 | --- | --- | --- | --- |
-| 1 | Sincronización, registro e historial | Ingesta BLE del GD50, registro manual de respaldo, listado por fecha, gráfica de tendencia, visualización en mg/dL o mmol/L | Desplegada en AWS con acceso por Cognito. Una sesión real del GD50 guarda todas sus lecturas válidas, incluidas las que comparten marca de tiempo (`T-9`), y marca las de control; repetirla no crea duplicados; las lecturas BLE y una manual aparecen en el historial y la gráfica |
-| 2 | Alertas | Umbrales configurables y un aviso por cada lectura que los cruza, incluidas las históricas, notificados en un resumen por sincronización en la web y en el escritorio (colector); texto de descargo visible | Requisito de entrada: umbrales por defecto validados por el médico (`P-2`). Con lecturas de prueba que cruzan cada umbral, se genera el aviso exactamente una vez por lectura, con el descargo visible |
-| 3 | Informe, exportación y anotaciones | Anotación manual de comidas e insulina o medicación; resumen de un periodo: promedios, mínimos, máximos, eventos fuera de rango y anotaciones; exportación CSV de todas las lecturas (las de control marcadas) y anotaciones | El PDF y el CSV de un periodo de prueba coinciden con los datos de la base de datos (verificado por script) |
-| 4 | Integraciones y AI | Elegidos en `P-1`: análisis estadístico local (sin terceros) y, sujetos a `P-3`, resumen con LLM, exportación a Sheets/Drive y avisos por WhatsApp al número del usuario | Se define en su propia spec. La estadística local no depende de `T-6`; las integraciones con terceros esperan a resolverlo |
-| 5 | App móvil e información | App móvil Expo / React Native como cliente de la API (consultar, registrar y recibir avisos por push) y explicaciones informativas de tendencias con descargo; sin diagnóstico ni dosis | Se define en su propia spec, después de la fase 4, con la autenticación de `T-8` validada y la revisión médica y regulatoria de `P-5` |
+| 1 | Base, sincronización e historial (hacia febrero de 2027) | Infraestructura desplegable en AWS `us-east-1` con Cognito (`fase-1a`); colector BLE con importación dual desde el GD50 en vivo y desde el respaldo local de las 451 lecturas históricas (`fase-1b`); registro manual de respaldo, listado e historial con filtros de fecha y tipo de evento, gráfica de tendencia y conversión mg/dL ↔ mmol/L (`fase-1c`) | Desplegada en AWS `us-east-1` con acceso por Cognito. La importación dual del respaldo local (451 registros) y una sesión BLE del GD50 guardan todas las lecturas válidas (incluidas las que comparten marca de tiempo según `T-9`), marcan las de control, descartan las inválidas y al repetirse crean 0 duplicados; las lecturas BLE y manuales aparecen en el historial y la gráfica |
+| 2 | Corte Consulta Febrero 2027: exportaciones, PDF básico, insulina y anotaciones básicas | `fase-2a` (imprescindible para consulta): exportaciones en CSV y Excel (`.xlsx`) + informe PDF único en su versión básica de lecturas (`a1+` base: promedio, mínimo, máximo y conteo, sin depender de `D-2`); `fase-2b` (objetivo consulta): registro rápido e historial de aplicaciones de insulina con filtros por tipo, edición/borrado con confirmación y registro retroactivo, anotaciones básicas con fecha/hora, categoría (`medicación` sin insulina), descripción e importancia, y ampliación del PDF básico con `a1+` de dosis (conteo, días `0/1/2/3+`, días sin registro, intervalo y suma de unidades); admite ejecución por CLI si algún flujo web aún no está publicado | El informe PDF básico, el CSV y el `.xlsx` generados para un período de prueba coinciden exactamente con las lecturas, dosis de insulina, estadísticos descriptivos (`a1+` de fase 2) y anotaciones de la base de datos (verificado por pruebas automatizadas y script), listos para entregar en la consulta médica de finales de febrero de 2027 |
+| 3 | Cierre del MVP (hacia noviembre de 2027): inventario, alertas, análisis histórico, patrones y anotaciones enriquecidas | Inventario de insulina acoplado a las dosis (compras/saldo inicial, descuento y recálculo automático al crear/editar/borrar dosis con punto de corte `T_conteo` en conteos físicos, y alertas de stock); alertas de glucemia con umbrales configurables (y valores de guía clínica citada con descargo hasta cerrar `D-2`) más aviso de «no hay lecturas sincronizadas en las últimas 24 h»; comparación de periodos, tiempo en rango/fuera de rango, distribución en 6 bloques de 4 h y motor de 3 patrones objetivos; anotaciones enriquecidas (etiquetas, dashboard de tarjetas tipo Notion, búsqueda avanzada); exportación y borrado total de salida para todas las entidades | Con datos de prueba, el inventario cuadra tras altas, ediciones, borrados y ajustes por conteo físico; cada lectura o condición de stock/24 h genera su aviso exactamente una vez con descargo visible; el motor de patrones y la comparación de periodos reproducen los resultados esperados en la zona horaria configurada; la exportación completa (CSV, `.xlsx`, PDF) cubre todas las entidades; y el cierre formal de `D-2` registra los umbrales por defecto validados por el médico |
+| 4 | Post-MVP: CGM, IA e integraciones | Integración con sensor CGM cuando exista dispositivo tras la consulta médica (`D-3`); y, según `P-1` y `P-3`, resúmenes con LLM, exportación a Sheets/Drive y avisos externos (p. ej. WhatsApp) solo sobre agregados anonimizados | Se define en sus propias specs después de cerrar el MVP, una vez resueltos `D-3` y `T-6` |
+| 5 | Post-MVP: App móvil e información | App móvil Expo / React Native (`T-8`) como cliente de la API (consultar, registrar y recibir notificaciones push) y explicaciones informativas de tendencias con descargo visible, sin diagnóstico ni dosis (`P-5`) | Se define en su propia spec después de la fase 4, con la autenticación móvil (`T-8`) validada y la revisión médica y regulatoria de `P-5` |
 
 ## Fuera de alcance (MVP, fases 1–3)
 
-- Integraciones de terceros y AI avanzada (fase 4).
-- Aplicación móvil (fase 5, cliente de la API; tecnología en `T-8`).
-- Multi-usuario, roles y acceso de médicos al sistema.
-- Integración con sensores CGM (p. ej. FreeStyle Libre o Dexcom).
-- Glucómetros distintos del GD50. Añadir otro exige verificar su perfil BLE y un ADR.
-- Diagnóstico, recomendaciones de tratamiento o dosificación. Quedan fuera de todas las fases, incluida la 5 (`P-5`).
-- Integración con Apple Health y Google Fit. Se retiraron de la fase 4. Apple Health requiere acceso nativo a iOS; se reevalúa en la spec de fase 5 (`T-8`).
+- Integración con sensores CGM (p. ej. FreeStyle Libre o Dexcom; pospuesta a fase 4 tras la consulta de febrero de 2027; `D-3`).
+- Aplicación móvil y notificaciones push (pospuestas a fase 5, cliente de la API; tecnología en `T-8`).
+- WhatsApp y cualquier mensajería o API de IA avanzada de terceros (pospuestos a fase 4; `P-1`, `P-3`, `T-6`).
+- Horario silencioso, modo nocturno y horarios permitidos de notificación.
+- Asociación o vínculo directo de una anotación con un patrón detectado, una alerta o un periodo comparado (`Q-p`).
+- Multiusuario, roles, portales médicos, enlaces públicos, usuarios invitados o acceso de médicos o terceros al sistema.
+- Historia clínica general (presión arterial, peso, laboratorios no glucémicos, citas médicas, EPS/aseguradoras).
+- Otros glucómetros BLE distintos del GlucoQuick GD50 (añadir otro exige verificar su perfil BLE y un ADR) y sincronización programada en segundo plano.
+- Integración con Apple Health y Google Fit (se retiraron de la fase 4; Apple Health requiere acceso nativo a iOS y se reevalúa en la spec de fase 5 si aplica, `T-8`).
+- Diagnóstico, cálculo de adherencia frente a prescripción, evaluación de efectividad terapéutica y recomendaciones de tratamiento o dosificación (prohibidos en todas las fases, incluida la 5; `P-5`, [ADR 0010](../../docs/adr/0010-descriptive-statistics-without-clinical-recommendations.md)).
 
 ## Métricas de éxito
 
-| Métrica | Tipo | Objetivo | Cómo se mide | Estado |
-| --- | --- | --- | --- | --- |
-| Sesiones BLE que guardan todas las lecturas del dispositivo | Fiabilidad | ≥ 95 % de las últimas 20 sesiones | En cada sesión, el colector compara los registros del GD50 (RACP) con los confirmados por la API, descontando los inválidos | **Decidido** |
-| Lecturas válidas del dispositivo que nunca llegan a guardarse | Fiabilidad | 0 | La misma comparación, acumulada: una lectura pendiente debe quedar confirmada en la sesión siguiente | **Decidido** |
-| Lecturas duplicadas tras re-sincronizar | Calidad | 0 | Restricción `UNIQUE` en la base de datos y prueba de integración que sincroniza dos veces el mismo lote | **Decidido** |
-| Coste mensual de nube | Negocio | < US$20 | AWS Budgets con alarma al 80 % y revisión de la factura mensual | **Decidido** |
+Los plazos de las métricas de adopción y uso (métricas 3, 5, 6, 7, 8, 9, 10 y 12) se cuentan desde la entrada en producción del módulo correspondiente; la métrica principal (#1) y el MVP completo mantienen el horizonte de 12 meses hacia noviembre de 2027. *(Decidido)*
+
+| # | Métrica | Tipo | Línea base | Objetivo | Plazo | Cómo se mide |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | Consultas médicas acompañadas de un informe de MonitorGlucosa (principal) | Negocio | 0 % | 100 % | 12 meses (nov 2027) | Informes generados en el período divididos entre las consultas médicas reales informadas manualmente por el titular |
+| 2 | Sesiones BLE que guardan todas las lecturas válidas del GD50 | Fiabilidad | — | ≥ 95 % de las últimas 20 sesiones | Desde fase 1 | En cada sesión, el colector compara los registros RACP del GD50 con los confirmados por la API, descontando los inválidos |
+| 3 | Sincronizaciones iniciadas por el usuario completadas sin error | Uso operativo | 0 % | ≥ 95 % | 2 meses desde fase 1 | Sesiones completadas entre sesiones iniciadas, con contador local en el colector |
+| 4 | Lecturas válidas perdidas por sobrescritura o no guardadas (y 0 duplicadas tras re-sincronizar) | Fiabilidad / Calidad | Desconocido (451 en búfer) | 0 perdidas y 0 duplicadas | 6 meses desde fase 1 | Respaldo local inmediato de las 451 lecturas + comparación acumulada entre sesiones BLE y restricción `UNIQUE` en la base de datos con prueba de integración que sincroniza dos veces el mismo lote |
+| 5 | Registros de aplicaciones de insulina por semana | Uso | 0 | ≥ 20 / semana | 3 meses desde módulo insulina | Conteo semanal de aplicaciones de insulina registradas en la base de datos |
+| 6 | Consultas semanales al historial | Uso | 0 | ≥ 3 / semana | 3 meses desde fase 1 | Conteo de accesos al historial sin almacenar ni analizar el contenido médico consultado |
+| 7 | Alertas activas configuradas | Uso | 0 | ≥ 3 | 2 meses desde módulo alertas | Conteo de reglas/umbrales activos en la configuración del usuario |
+| 8 | Comparaciones históricas de periodos por mes | Uso | 0 | ≥ 4 / mes | 6 meses desde módulo análisis | Conteo mensual de ejecuciones de comparación entre periodos |
+| 9 | Anotaciones creadas por mes | Uso | 0 | ≥ 20 / mes | 6 meses desde módulo anotaciones | Conteo mensual de anotaciones registradas |
+| 10 | Patrones detectados y mostrados por el motor de análisis | Analítica | 0 | ≥ 1 / mes | 6 meses desde módulo análisis | Conteo de patrones objetivos detectados (mide actividad del motor analítico, no beneficio clínico) |
+| 11 | Coste mensual de nube en AWS (`us-east-1`) | Negocio | — | < US$20/mes | Permanente | AWS Budgets con alarmas al 80 % (US$16) y al 100 % (US$20), y revisión mensual en Cost Explorer |
+| 12 | Informes PDF generados y descargados por mes | Uso | 0 | ≥ 1 / mes | 3 meses desde módulo informes | Conteo mensual de informes PDF generados y descargados (indicador adelantado de la métrica 1) |
+
+## Prioridades y restricciones
+
+- **Orden de sacrificio ante conflictos (de lo primero que se cede a lo más protegido):** `1. Rendimiento → 2. Disponibilidad → 3. Funcionalidades → 4. Rapidez de entrega → 5. Coste (< US$20/mes)`. *(Decidido)*
+- **Cinco pilares intocables:** (1) Integridad y exactitud de los datos (`Integridad > Pérdida > Filtración > Indisponibilidad`); (2) Conservación del histórico (las 451 lecturas actuales del GD50 y todas las futuras); (3) Privacidad (cero datos reales en Git público ni en terceros); (4) Frontera clínica `P-5` ([ADR 0010](../../docs/adr/0010-descriptive-statistics-without-clinical-recommendations.md)); y (5) Trazabilidad extremo a extremo de cada cifra e informe. *(Decidido)*
+- **Regla de arbitraje personal vs portafolio:** el valor práctico para la gestión personal de la diabetes y llegar a las consultas médicas prevalece siempre sobre la sofisticación técnica de portafolio. *(Decidido)*
+- **Presupuesto y capacidad:** operación en nube `< US$20/mes` en `us-east-1` (alarmas en US$16 y US$20; tope absoluto puntual de US$30/mes); presupuesto de construcción `US$0` adicionales (solo herramientas Open Source con licencias permisivas y GitHub Free); dedicación base de `10 h/semana` (8–15 h/semana) de un único ingeniero. *(Decidido)*
+- **Tres hitos temporales:** (1) **Inmediato (próximas semanas):** enriquecer y asegurar fuera del repositorio el respaldo local de las 451 lecturas del GD50 y verificar en el manual el tope de memoria (`T-1`); (2) **Finales de febrero de 2027 (próxima consulta médica):** fases 1 y 2 operativas (admitiendo ejecución por CLI como válvula de escape si alguna vista web aún no está lista); y (3) **Noviembre de 2027 (12 meses):** fase 3 (MVP completo) y cierre de `D-2`. *(Decidido)*
 
 ## Supuestos y riesgos
 
 | Tipo | Descripción | Mitigación |
 | --- | --- | --- |
-| Supuesto | El GD50 expone sus lecturas guardadas por el perfil Glucose estándar. Verificado en GATT (`0x1808`) y por lectura RACP (451 registros, sin borrar); falta confirmar zona horaria y estabilidad de `seq`. | Relectura y decisión de clave antes de la fase 1 (`T-1`, `T-9`) |
-| Supuesto | La precisión del glucómetro es suficiente para alertas personales. No verificado. | Mostrar la fuente y el descargo; no usar las lecturas como dato clínico (`P-2`) |
-| Riesgo | Un dispositivo BLE falso inyecta lecturas en el historial. | El colector solo acepta la dirección BLE registrada del GD50; cifrado del enlace por verificar (`T-1`) |
-| Riesgo | Restaurar un backup hace reaparecer datos que el titular ya borró. | Registro de supresiones fuera de Aurora, reaplicado tras cada restauración (ver [tech.md](tech.md#ciclo-de-vida-de-los-datos)) |
-| Riesgo | Datos de salud en la nube sin controles adecuados (Ley 1581). | Cifrado con KMS, TLS, acceso IAM mínimo, sin datos en logs, minimización (ver [tech.md](tech.md#seguridad)) |
-| Riesgo | Las alertas se interpretan como consejo médico o como software de dispositivo médico regulado. | Descargo visible; umbrales configurables, con valores de una guía clínica citada y validada por el médico; validación regulatoria antes de uso externo (`P-2`) |
-| Riesgo | Enviar datos de salud a APIs de AI de terceros. | Solo agregados anonimizados, con consentimiento registrado (`P-3`) |
-| Riesgo | Exportar lecturas a Sheets/Drive o enviar avisos por mensajería saca datos de salud del sistema. | Solo agregados anonimizados; diseño revisado antes de fase 4 (`P-1`, `P-3`) |
-| Riesgo | Alcance excesivo ("robusto", "múltiples integraciones") que nunca termina. | Fases con criterio de "hecho"; integraciones fuera del MVP |
-| Riesgo | Coste fuera de presupuesto en `sa-east-1`, que es más cara que `us-east-1`. | Presupuesto con alarma desde el día 1; escala a cero donde sea posible (`T-3`) |
-| Riesgo | El GD50 sobrescribe sus lecturas más antiguas al llenarse (capacidad no verificada; hoy guarda 451). | Confirmar la capacidad en el manual o con el fabricante antes de la fase 1 (`T-1`); sincronizar con frecuencia; el colector avisa si se acumulan lecturas sin sincronizar |
-| Riesgo | La sincronización depende de tener el laptop y el dispositivo cerca. | Registro manual de respaldo (fase 1) |
-| Riesgo | Se roba o pierde el equipo del colector con un refresh token válido. | Almacén seguro del SO, rotación del refresh token, `RevokeToken` y `AdminUserGlobalSignOut` (`T-7`) |
-| Riesgo | La app móvil guarda datos de salud en un dispositivo que el sistema no controla. | Token solo en el almacén seguro de la plataforma; sin caché de datos de salud sin cifrar; revisión en la spec de fase 5 (`T-8`) |
-| Riesgo | Mostrar dosis anotadas junto a la glucemia se percibe como interpretación clínica. | Dosis tal cual, sin ratios, correcciones ni sugerencias; descargo visible (`P-5`) |
-| Riesgo | El contenido informativo de fase 5 se percibe como diagnóstico o indicación de dosis. | Sin diagnóstico ni dosis; descargo visible; revisión médica y regulatoria antes de empezar la fase 5 (`P-5`, `P-2`) |
+| Supuesto | El GD50 expone sus lecturas guardadas por el perfil Glucose estándar (`0x1808`), verificado en GATT y por lectura RACP (451 registros, sin borrar); el extractor RACP y el decodificador GLS ya están probados localmente y falta confirmar en vivo la zona horaria, la estabilidad de `seq` tras nuevas tomas y el tope del búfer. | Conservar el respaldo local completo fuera de Git, importar por vía dual (BLE + archivo local) y cerrar las verificaciones de `T-1` y `T-9` antes de `fase-1b` |
+| Supuesto | La precisión del glucómetro GD50 es suficiente para seguimiento y alertas personales, pero no sustituye pruebas clínicas de laboratorio. | Mostrar el origen de cada lectura y el descargo visible en web, avisos e informes; no usar las lecturas como diagnóstico clínico (`P-2`, `P-5`) |
+| Riesgo | Corrupción silenciosa de datos o cálculo estadístico erróneo que induzca a una mala interpretación al titular o al médico (amenaza #1). | Validación estricta en el borde, pruebas deterministas sobre agregados (`a1+`), transacciones explícitas e invariante de fallar antes que mostrar un dato dudoso |
+| Riesgo | El GD50 sobrescribe sus lecturas más antiguas al llenarse (capacidad no verificada; hoy guarda 451) antes de que el backend en AWS esté en producción (amenaza #2). | Volcado local inmediato de los 451 registros con campos GLS crudos fuera del repositorio, confirmar capacidad en manual (`T-1`), sincronizar con frecuencia e importador dual en `fase-1b` |
+| Riesgo | Un dispositivo BLE falso inyecta lecturas en el historial. | El colector solo acepta la dirección BLE registrada del GD50; cifrado del enlace (bonding) por verificar en `T-1` |
+| Riesgo | Restaurar un backup de Aurora hace reaparecer datos que el titular ya borró. | Registro de supresiones en S3 fuera de Aurora, reaplicado tras cada restauración antes de abrir el tráfico (ver [tech.md](tech.md#ciclo-de-vida-de-los-datos)) |
+| Riesgo | Datos de salud en la nube sin controles adecuados (Ley 1581/2012) o exposición accidental de lecturas reales, exportaciones o secretos en el repositorio público de GitHub (amenaza #4). | Cifrado con KMS, TLS, acceso IAM mínimo, sin datos en logs, minimización; respaldos y exportaciones fuera del árbol del repositorio bajo cifrado de disco, pre-commit (`gitleaks`) y escaneo en CI (ver [tech.md](tech.md#seguridad)) |
+| Riesgo | Las estadísticas descriptivas (`a1+`), los patrones, el saldo de inventario, las alertas o el contenido informativo de fase 5 se interpretan como consejo médico, diagnóstico, indicación de dosis o software de dispositivo médico regulado. | Enmienda estrecha de `P-5` ([ADR 0010](../../docs/adr/0010-descriptive-statistics-without-clinical-recommendations.md)), sin diagnóstico ni dosis, descargo visible en todas las pantallas y PDF, umbrales configurables con guía clínica citada y validada por el médico (`P-2`, `D-2`), y revisión regulatoria antes de fase 5 o uso externo |
+| Riesgo | Enviar datos de salud a APIs de IA de terceros, exportar a Sheets/Drive o enviar avisos por mensajería saca datos de salud del sistema. | Prohibido en el MVP (fases 1–3); en fase 4 solo agregados anonimizados con consentimiento registrado y diseño revisado (`P-1`, `P-3`, `T-6`) |
+| Riesgo | Alcance excesivo («robusto», «múltiples integraciones») o bloqueo por dependencias externas retrasa el hito de la consulta médica de finales de febrero de 2027. | Fases reordenadas con criterio de «hecho» (`fase-2a` y `fase-2b`), integraciones fuera del MVP, regla `R4.1` para `D-2` y CLI permitida como válvula de escape |
+| Riesgo | Coste fuera del presupuesto de `< US$20/mes` en la nube. | Cambio de `sa-east-1` a `us-east-1` ([ADR 0011](../../docs/adr/0011-aws-region-us-east-1-for-cost-optimization.md)), escala a cero (`MinCapacity = 0`), VPC sin NAT Gateway y alarmas en AWS Budgets al 80 % (US$16) y 100 % (US$20) (`T-3`) |
+| Riesgo | La sincronización depende de tener el portátil y el dispositivo cerca, y el registro diferido de insulina/anotaciones puede provocar olvidos o desfases en el saldo del inventario. | Registro manual de respaldo (fase 1), interfaz con `< 3 clics y < 30 s`, registro retroactivo de dosis con fecha/hora real, recálculo automático y ajuste manual por conteo físico con punto de corte `T_conteo` |
+| Riesgo | El aviso de «no hay lecturas sincronizadas en las últimas 24 h» genera falsos positivos cuando el titular viaja sin el portátil pero sigue midiéndose en el GD50. | Redacción obligatoria referida a «lecturas sincronizadas» (nunca «no te has medido») y evaluación diferida aceptada conscientemente (`R-9` en [tech.md](tech.md#riesgos-aceptados)) |
+| Riesgo | Factor bus = 1 y robo o pérdida del equipo del colector (con un refresh token válido) o del teléfono comprometen el acceso o la operación. | Almacén seguro del SO (`keyring`), rotación del refresh token, `RevokeToken`, `AdminUserGlobalSignOut` (`T-7`), procedimientos de recuperación de MFA/cuentas (AWS y GitHub), exportaciones periódicas y runbooks en `docs/runbooks/` (`R-1`) |
+| Riesgo | La app móvil (fase 5) guarda datos de salud en un dispositivo que el sistema no controla. | Token solo en el almacén seguro de la plataforma; sin caché de datos de salud sin cifrar; revisión en la spec de fase 5 (`T-8`) |
 
 ## Decisiones abiertas
 
 | ID | Pregunta | Estado | Resolución o pendiente | Bloquea |
 | --- | --- | --- | --- | --- |
-| P-1 | ¿Qué integraciones de terceros y qué análisis con AI se quieren? | **Decidido** | Fase 4: análisis estadístico local (promedios, variabilidad, % de lecturas en rango) dentro del sistema, sin datos a terceros; resumen con LLM, exportación a Sheets/Drive y avisos por mensajería, sujetos a `P-3`. Apple Health y Google Fit quedan fuera. Cada integración va en su propia spec. | Fase 4 |
-| P-2 | ¿Qué umbrales usan las alertas y quién los define? ¿Requiere registro ante INVIMA? | **Parcialmente decidido** | Decidido: umbrales por defecto tomados de una guía clínica citada, validados por el médico (fuera del sistema, sin acceso a él) antes de la fase 2; el usuario puede cambiarlos. Sin consejo médico. Pendiente solo si el uso deja de ser personal: validar la clasificación regulatoria ante INVIMA antes. | Fase 2 (validación médica de los valores) |
-| P-3 | ¿Pueden enviarse datos de glucosa a terceros (APIs de AI, Sheets/Drive, mensajería)? | **Decidido** | No enviar datos identificables. Solo agregados anonimizados, con consentimiento registrado (Ley 1581/2012). Pendiente para la spec de fase 4: qué contiene un aviso por mensajería. | Fase 4 (avisos por mensajería) |
-| P-4 | ¿Los identificadores del código van en español o en inglés? | **Decidido** | Identificadores en inglés (`GlucoseReading`, `measure_glucose`). Español en la interfaz, mensajes al usuario, campos visibles y glosario. | Ninguno (resuelto) |
-| P-5 | ¿Qué incluye la fase 5 "informativa"? | **Decidido** | Explicaciones de tendencias con descargo visible; sin diagnóstico, tratamiento ni dosis, en ninguna fase. Antes de empezar la fase 5: revisión médica y regulatoria. | Fase 5 (revisión médica y regulatoria) |
+| P-1 | ¿Qué integraciones de terceros y qué análisis con IA se quieren después del MVP? | **Decidido** | El análisis estadístico descriptivo (`a1+`), la comparación de periodos y el motor de patrones objetivos entran en las fases 2 y 3 del MVP dentro del sistema y sin datos a terceros ([ADR 0010](../../docs/adr/0010-descriptive-statistics-without-clinical-recommendations.md)). En la fase 4 (post-MVP) quedan los resúmenes con LLM, la exportación a Sheets/Drive y los avisos externos por mensajería, sujetos a `P-3` y `T-6` (cada integración en su propia spec). Apple Health y Google Fit se descartaron frente a mantener clientes sin acceso nativo propietario. | Fase 4 |
+| P-2 | ¿Qué umbrales por defecto usan las alertas y el tiempo en rango, quién los valida (`D-2`) y requiere registro ante INVIMA? | **Parcialmente decidido** | Decidido: mientras sea de uso personal y sin recomendaciones clínicas ([ADR 0010](../../docs/adr/0010-descriptive-statistics-without-clinical-recommendations.md)), no requiere registro ante INVIMA (se descartó clasificarlo como dispositivo médico frente a mantenerlo como herramienta personal de registro; si el uso deja de ser personal, se valida antes la clasificación regulatoria ante INVIMA). Pendiente externo (`D-2` en [discovery.md](discovery.md#preguntas-abiertas)): validar con el médico tratante en consulta (fuera del sistema, sin acceso a él) los valores por defecto tomados de una guía clínica citada, en vez de fijar constantes arbitrarias sin respaldo clínico. Según la regla de gobierno (`R4.1`), `D-2` solo bloquea el cierre formal de esa validación personalizada en la fase 3, no el diseño ni la implementación. | Cierre formal de validación médica en Fase 3 (`D-2`) |
+| P-3 | ¿Pueden enviarse datos de salud a terceros (APIs de IA, Sheets/Drive, mensajería)? | **Decidido** | En el MVP (fases 1–3) no se envía ningún dato a terceros (WhatsApp y SaaS externos descartados). En la fase 4 no se envían datos identificables: solo agregados anonimizados con consentimiento registrado (Ley 1581/2012); pendiente para la spec de fase 4 definir el contenido exacto de un aviso por mensajería. | Fase 4 (avisos por mensajería) |
+| P-4 | ¿Los identificadores del código van en español o en inglés? | **Decidido** | Identificadores en inglés (`GlucoseReading`, `InsulinDose`, `measure_glucose`); español en la interfaz, mensajes al usuario, campos visibles, informes PDF y glosario. | Ninguno (resuelto) |
+| P-5 | ¿Cuál es la frontera exacta entre información permitida y soporte a decisiones clínicas en el MVP y en la fase 5? | **Decidido** | Enmendado por [ADR 0010](../../docs/adr/0010-descriptive-statistics-without-clinical-recommendations.md): se permiten hechos, estadística descriptiva sobre registros propios (`a1+`), saldo/estimación informativa de inventario, patrones objetivos sobre umbrales configurados y (en fase 5) explicaciones informativas de tendencias, siempre con descargo visible. Prohibidos en todas las fases el diagnóstico, la adherencia frente a pauta prescrita, la evaluación de efectividad terapéutica y las recomendaciones de tratamiento o dosis. Antes de iniciar la fase 5 se realiza revisión médica y regulatoria. | Fase 5 (revisión médica y regulatoria) |
 
 ## Glosario
 
 | Término | Significado |
 | --- | --- |
-| Glucemia | Concentración de glucosa en sangre. Se guarda en mg/dL; se puede mostrar en mmol/L. |
-| Anotación | Registro manual de una comida o de una dosis de insulina o medicación, sin recomendaciones (fase 3). Es la única fuente de la medicación: el campo de medicación del GD50 no se captura. |
-| Lectura | Una medición de glucemia con su marca de tiempo y su origen (BLE o manual). |
-| Contexto de la lectura | Datos que el GD50 asocia a una lectura (`0x2A34`): comida, carbohidratos, ejercicio, salud. Se guarda sin la medicación. |
-| Lectura de control | Medición hecha con solución de control para probar el medidor. Se guarda marcada y no cuenta en historial, estadísticas, alertas ni PDF. |
-| Hipoglucemia | Lectura por debajo del umbral inferior configurado. |
-| Hiperglucemia | Lectura por encima del umbral superior configurado. |
-| Umbral | Valor de glucemia, configurado por el usuario, que dispara un aviso al cruzarlo. |
-| Alerta | Funcionalidad de la fase 2: regla de umbral que, al cruzarse, genera un aviso. |
-| Aviso | Registro generado por una lectura que cruza un umbral; como máximo uno por lectura y tipo de umbral. Se notifica agrupado por sincronización. |
-| Sincronización | Sesión BLE en la que el colector lee el GD50 y envía las lecturas nuevas a la API. |
-| Duplicado | Lectura cuya clave de idempotencia ya existe; se ignora sin error (`T-9`). |
-| Lectura inválida | Registro del dispositivo con fecha o valor imposible (p. ej. fecha 2038); se descarta. |
-| CGM | Sensor de glucosa continuo (p. ej. FreeStyle Libre o Dexcom). Fuera de alcance del MVP. |
-| Informe | Resumen en PDF de un periodo de lecturas, con promedios y eventos fuera de rango. |
-| GlucoQuick GD50 | Glucómetro usado como fuente de las lecturas, conectado por Bluetooth. |
-| BLE | Bluetooth Low Energy: protocolo de conexión del glucómetro. |
-| Colector | Componente local que lee el GD50 por BLE y envía las lecturas a la API. |
-| Ley 1581/2012 | Ley colombiana de protección de datos personales (habeas data). |
-| Dato sensible | Dato de salud o de origen biométrico, con protección reforzada. |
-| Fase | Bloque de alcance con criterio de "hecho", que se trabaja como una spec. |
-| Agregado anonimizado | Estadístico de varias lecturas (promedio, mínimo, máximo) sin datos identificables. Formato permitido para servicios de terceros según `P-3`. |
-| Guía clínica citada | Fuente clínica publicada y referenciada de la que se toman los valores por defecto de los umbrales (`P-2`). |
-| Contenido informativo | Explicación de tendencias con descargo visible, sin diagnóstico ni dosis (fase 5, `P-5`). |
-| Descargo | Aviso visible de que la información no sustituye la consulta médica. |
-| Cliente de la API | Aplicación que consume `/api/v1` sin reglas de negocio propias: colector, web y app móvil. |
+| Glucemia | Concentración de glucosa en sangre. Se almacena siempre en mg/dL y puede mostrarse en mg/dL o mmol/L. |
+| Lectura | Medición de glucemia con su marca de tiempo en UTC y su origen (`ble` o `manual`). |
+| Contexto de la lectura | Datos que el GD50 asocia a una lectura (`0x2A34`): comida, carbohidratos, ejercicio y salud. Se guarda excluyendo siempre el campo de medicación del medidor. |
+| Lectura de control | Medición hecha con solución de control para verificar el medidor. Se guarda marcada y se excluye del historial general, estadísticas, patrones, alertas e informes PDF. |
+| Respaldo local | Archivo local extraído directamente del GD50 (actualmente con las 451 lecturas históricas y sus metadatos/tramas GLS), conservado fuera de Git y usado por el colector como segunda fuente de importación idempotente. |
+| Aplicación de insulina | Registro manual de una dosis de insulina administrada (fecha y hora reales en UTC, tipo de insulina y unidades aplicadas), editable y eliminable con confirmación. Es la única fuente de datos de insulina del sistema. |
+| Inventario de insulina | Registro de entradas (compras o saldo inicial), consumos automáticos por aplicaciones de insulina y ajustes manuales por conteo físico (`T_conteo`). Su saldo y duración estimada son informativos, nunca garantías clínicas. |
+| Anotación | Registro manual de un evento contextual con fecha y hora, categoría, descripción y nivel de importancia (más etiquetas y vista de tarjetas en fase 3). Su categoría «medicación» es exclusiva para fármacos distintos de la insulina (`Q-r`). |
+| Hipoglucemia | Lectura por debajo del umbral inferior configurado por el usuario. |
+| Hiperglucemia | Lectura por encima del umbral superior configurado por el usuario. |
+| Umbral | Valor configurable por el usuario (de glucemia o de unidades en inventario) que dispara un aviso objetivo al cruzarse. |
+| Alerta | Regla configurable que evalúa lecturas de glucemia, saldo de inventario o tiempo transcurrido sin sincronizar lecturas y genera un aviso cuando se cumple su condición. |
+| Aviso | Registro generado al cumplirse una alerta (como máximo uno por lectura y tipo de umbral, por stock bajo o por falta de sincronización). En el MVP se muestra de forma diferida y agrupada en la web y en el escritorio del colector. |
+| Aviso por falta de medición | Aviso objetivo que indica «no hay lecturas sincronizadas en las últimas 24 h» (configurable en 12, 24, 48 h o personalizado), evaluado únicamente al abrir la web o al sincronizar sobre las lecturas almacenadas en el sistema. |
+| Patrón | Hallazgo objetivo calculado por el motor de análisis sobre las lecturas sincronizadas sin usar constantes clínicas fijas: (1) ≥ 3 lecturas bajo el umbral inferior en el mismo bloque de 4 h en 7 días, (2) ≥ 3 lecturas sobre el umbral superior en el mismo bloque de 4 h en 7 días, o (3) cambio del promedio de 7 días > 15 % relativo y > 15 mg/dL absolutos respecto a los 7 días previos. |
+| Estadística descriptiva (`a1+`) | Agregados matemáticos calculados exclusivamente sobre los registros propios del titular: en fase 2 (promedio, mínimo, máximo y conteo de lecturas; conteo de dosis, días con registro desglosados en `0, 1, 2, 3+` aplicaciones diarias, días sin registro, intervalo entre dosis y suma de unidades) y en fase 3 (tiempo en rango y 6 bloques de 4 h), sin evaluar adherencia contra prescripción ni efectividad del tratamiento ([ADR 0010](../../docs/adr/0010-descriptive-statistics-without-clinical-recommendations.md)). |
+| Informe | Documento PDF único y autoexplicativo de un período para entregar a los cuatro especialistas, con línea temporal, estadística descriptiva (`a1+`), episodios fuera de rango, aplicaciones de insulina y anotaciones relevantes. |
+| Sincronización | Sesión manual iniciada por el usuario en la que el colector lee el GD50 por BLE (o importa el respaldo local) y envía las lecturas nuevas a la API. |
+| Duplicado | Lectura cuya clave de idempotencia (`T-9`) ya existe en la base de datos; se ignora atómicamente sin error. |
+| Lectura inválida | Registro del dispositivo con fecha o valor imposible (p. ej. fecha 2038); se descarta en el borde y no entra en el historial. |
+| CGM | Sensor de monitoreo continuo de glucosa (p. ej. FreeStyle Libre o Dexcom). Fuera del alcance del MVP; su posible integración tras la consulta de febrero de 2027 corresponde a `D-3` y la fase 4. |
+| GlucoQuick GD50 | Glucómetro utilizado como fuente primaria de las lecturas por Bluetooth Low Energy (`0x1808`). |
+| BLE | Bluetooth Low Energy: protocolo inalámbrico de conexión del glucómetro GD50. |
+| Colector | Aplicación local en Python (`bleak`) que extrae las lecturas del GD50 o del respaldo local y las sincroniza con la API. |
+| Ley 1581/2012 | Ley colombiana de protección de datos personales (*habeas data*) adoptada voluntariamente como estándar de buenas prácticas. |
+| Dato sensible | Dato de salud o de origen biométrico, sujeto a protección reforzada. |
+| Fase | Bloque de alcance con criterio de «hecho» verificable, implementado mediante una o más specs en `.kiro/specs/`. |
+| Agregado anonimizado | Estadístico resumido de varias lecturas (promedio, mínimo, máximo) sin datos identificables, único formato permitido para eventuales servicios externos en la fase 4 (`P-3`). |
+| Guía clínica citada | Publicación médica referenciada de la que se toman los valores iniciales de los umbrales de glucemia, sujeta a validación por el médico tratante (`P-2`, `D-2`). |
+| Contenido informativo | Explicación descriptiva de tendencias con descargo visible, sin diagnóstico ni dosis (fase 5, `P-5`). |
+| Descargo | Aviso visible en la interfaz y en el PDF que indica que la información es descriptiva y no sustituye la consulta ni el criterio médico. |
+| Cliente de la API | Aplicación que consume `/api/v1` sin reglas de negocio propias: colector local, aplicación web y futura app móvil. |

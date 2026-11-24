@@ -1,0 +1,400 @@
+# Integración continua del monorepo monitorglucosa (Requisitos 7.1, NFR-1, NFR-4, NFR-5, NFR-6;
+# design.md · Pipeline y scripts, D15, D16, U-6, A-9, A-11).
+# Todas las acciones van fijadas por SHA de commit y las herramientas por versión + digest SHA-256.
+name: ci
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # -------------------------------------------------------------------------
+  # 1. Detección de rutas (git diff propio) + controles globales de seguridad
+  # -------------------------------------------------------------------------
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      compose: ${{ steps.filter.outputs.compose }}
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Detectar componentes afectados (git diff)
+        id: filter
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          import subprocess
+          from pathlib import Path
+
+          event = os.environ["EVENT_NAME"]
+          ref_name = os.environ["REF_NAME"]
+          zero_sha = "0" * 40
+
+          def write_outputs(backend: bool, compose: bool, infra: bool) -> None:
+              out = Path(os.environ["GITHUB_OUTPUT"])
+              with out.open("a", encoding="utf-8") as fh:
+                  fh.write(f"backend={'true' if backend else 'false'}\n")
+                  fh.write(f"compose={'true' if compose else 'false'}\n")
+                  fh.write(f"infra={'true' if infra else 'false'}\n")
+              print(f"changes -> backend={backend} compose={compose} infra={infra}")
+
+          # En push a main o cuando no hay commit base válido, se ejecuta todo (fail-safe).
+          if event == "push" and ref_name == "refs/heads/main":
+              write_outputs(True, True, True)
+              raise SystemExit(0)
+
+          if event == "pull_request":
+              base_sha = os.environ["PR_BASE_SHA"]
+              head_sha = os.environ["PR_HEAD_SHA"]
+          else:
+              base_sha = os.environ["PUSH_BEFORE_SHA"]
+              head_sha = os.environ["HEAD_SHA"]
+
+          if not base_sha or base_sha == zero_sha:
+              write_outputs(True, True, True)
+              raise SystemExit(0)
+
+          probe = subprocess.run(
+              ["git", "cat-file", "-e", f"{base_sha}^{{commit}}"],
+              check=False,
+              capture_output=True,
+          )
+          if probe.returncode != 0:
+              write_outputs(True, True, True)
+              raise SystemExit(0)
+
+          diff_range = (
+              [f"{base_sha}...{head_sha}"]
+              if event == "pull_request"
+              else [base_sha, head_sha]
+          )
+          diff = subprocess.check_output(
+              ["git", "diff", "--name-only", "-z", *diff_range],
+              text=True,
+          )
+          changed = [p for p in diff.split("\0") if p]
+
+          backend_re = re.compile(
+              r"^(backend/|dev/jwt-issuer/|dev/postgres/|scripts/|docs/api/README\.md$|"
+              r"\.kiro/specs/[^/]+/openapi\.yaml$|\.github/workflows/(ci|deploy)\.yml$|"
+              r"\.github/rulesets/main\.json$|\.python-version$)"
+          )
+          compose_re = re.compile(
+              r"^(backend/|dev/|compose\.yaml$|\.env\.example$|scripts/sql/|"
+              r"\.github/workflows/ci\.yml$)"
+          )
+          infra_re = re.compile(
+              r"^(infra/|\.github/workflows/ci\.yml$)"
+          )
+
+          write_outputs(
+              any(backend_re.match(p) for p in changed),
+              any(compose_re.match(p) for p in changed),
+              any(infra_re.match(p) for p in changed),
+          )
+          PY
+
+      - name: Escaneo de secretos con gitleaks v8.30.1 (NFR-5)
+        run: |
+          set -euo pipefail
+          GITLEAKS_VERSION="8.30.1"
+          GITLEAKS_SHA256="551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+          TMPDIR="$(mktemp -d)"
+          trap 'rm -rf "$TMPDIR"' EXIT
+          curl -fsSL \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            -o "${TMPDIR}/gitleaks.tar.gz"
+          echo "${GITLEAKS_SHA256}  ${TMPDIR}/gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf "${TMPDIR}/gitleaks.tar.gz" -C "${TMPDIR}" gitleaks
+          "${TMPDIR}/gitleaks" detect --source . --no-banner --redact
+
+      - name: Revisión de dependencias en PR (A-9)
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: moderate
+
+  # -------------------------------------------------------------------------
+  # 2. Backend, emisor JWT, scripts, OpenAPI, cobertura >= 80 % y Semgrep
+  # -------------------------------------------------------------------------
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine@sha256:f2f98726820d0342055351c6e9d36e705f5bfffb3dd53ff556325114b08afb6d
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: monitorglucosa
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d monitorglucosa"
+          --health-interval=2s
+          --health-timeout=3s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.5"
+          enable-cache: true
+          python-version: "3.13"
+
+      - name: Sincronizar dependencias fijadas (--locked)
+        run: |
+          set -euo pipefail
+          uv --directory backend sync --locked
+          uv --directory dev/jwt-issuer sync --locked
+          uv --directory scripts sync --locked
+
+      - name: Ruff, mypy estricto e import-linter (backend, jwt-issuer y scripts)
+        run: |
+          set -euo pipefail
+          uv --directory backend run ruff check .
+          uv --directory backend run ruff format --check .
+          uv --directory backend run mypy
+          uv --directory backend run lint-imports
+
+          uv --directory dev/jwt-issuer run ruff check .
+          uv --directory dev/jwt-issuer run ruff format --check .
+          uv --directory dev/jwt-issuer run mypy
+
+          uv --directory scripts run ruff check .
+          uv --directory scripts run ruff format --check .
+          uv --directory scripts run mypy
+
+      - name: Preparar roles mg_admin y mg_api en PostgreSQL 16 de CI
+        run: |
+          uv --directory backend run python - <<'PY'
+          import asyncio
+          import asyncpg
+
+          async def main() -> None:
+              conn = await asyncpg.connect(
+                  host="127.0.0.1",
+                  port=5432,
+                  user="postgres",
+                  password="testpass",
+                  database="monitorglucosa",
+              )
+              try:
+                  await conn.execute(
+                      """
+                      DO $$
+                      BEGIN
+                          IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'rds_iam') THEN
+                              CREATE ROLE rds_iam NOLOGIN;
+                          END IF;
+                          IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'mg_admin') THEN
+                              CREATE ROLE mg_admin WITH LOGIN CREATEROLE;
+                          END IF;
+                          GRANT rds_iam TO mg_admin WITH ADMIN OPTION;
+                          IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'mg_api') THEN
+                              CREATE ROLE mg_api WITH LOGIN PASSWORD 'testpass';
+                          END IF;
+                          GRANT mg_api TO mg_admin WITH ADMIN OPTION;
+                      END
+                      $$;
+                      """
+                  )
+              finally:
+                  await conn.close()
+
+          asyncio.run(main())
+          PY
+
+      - name: Pruebas backend (unitarias, integración PG16, contrato, propiedades) con cobertura >= 80 % (NFR-1)
+        env:
+          TEST_POSTGRES_HOST: "127.0.0.1"
+          TEST_POSTGRES_PORT: "5432"
+          TEST_POSTGRES_SUPERUSER: "postgres"
+          TEST_POSTGRES_SUPERPASS: "testpass"
+        run: |
+          set -euo pipefail
+          uv --directory backend run pytest -m "not e2e" --cov --cov-fail-under=80
+          uv --directory dev/jwt-issuer run pytest
+          uv --directory scripts run pytest
+
+      - name: Verificar contrato OpenAPI 3.1 y referencia publicada (NFR-6)
+        run: |
+          set -euo pipefail
+          uv --directory backend run python tools/export_openapi.py --check
+          uv --directory backend run openapi-spec-validator openapi.json
+          for spec_oa in .kiro/specs/*/openapi.yaml; do
+            [ -f "$spec_oa" ] || continue
+            uv --directory backend run openapi-spec-validator "../${spec_oa}"
+          done
+
+      - name: Análisis estático de seguridad Semgrep OWASP (1.184.0 por digest)
+        run: |
+          docker run --rm \
+            -v "${PWD}:/src:ro" \
+            -w /src \
+            semgrep/semgrep:1.184.0@sha256:cc1b68266f267878b39739373ea9985b9a78e5d64497dd875c8de100b22695ed \
+            semgrep scan \
+            --config p/owasp-top-ten \
+            --config p/python \
+            --error \
+            --metrics=off \
+            --quiet \
+            --exclude scripts/tests \
+            backend/src backend/tools dev/jwt-issuer/src scripts
+
+  # -------------------------------------------------------------------------
+  # 3. Construcción de imagen linux/amd64 y pruebas E2E con Docker Compose
+  # -------------------------------------------------------------------------
+  compose:
+    needs: changes
+    if: needs.changes.outputs.compose == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.5"
+          enable-cache: true
+          python-version: "3.13"
+
+      - name: Construir imagen única (linux/amd64 sin provenance ni sbom; D5)
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            --provenance=false \
+            --sbom=false \
+            -t monitorglucosa-api:ci \
+            backend
+
+      - name: Levantar Compose con --wait y comprobar /health (Requisito 1.1)
+        run: |
+          set -euo pipefail
+          cp .env.example .env
+          trap 'docker compose down -v --remove-orphans || true; rm -f .env' EXIT
+          docker compose up -d --build --wait
+          curl -fsS http://127.0.0.1:8000/health | grep -q '"ok"'
+
+      - name: Pruebas punta a punta contra Docker y Compose (Requisitos 1.1–1.3, 3.3, 3.5)
+        run: |
+          set -euo pipefail
+          uv --directory backend sync --locked
+          uv --directory backend run pytest -m e2e
+
+  # -------------------------------------------------------------------------
+  # 4. Infraestructura Terraform (offline con mocks) y Checkov (NFR-4)
+  # -------------------------------------------------------------------------
+  infra:
+    needs: changes
+    if: needs.changes.outputs.infra == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: "1.16.6"
+          terraform_wrapper: false
+
+      - name: Terraform fmt, init offline, validate y terraform test
+        run: |
+          set -euo pipefail
+          terraform -chdir=infra/terraform fmt -check -recursive
+          terraform -chdir=infra/terraform init -backend=false -input=false
+          terraform -chdir=infra/terraform validate
+          terraform -chdir=infra/terraform test
+
+      - name: Auditoría estática IaC con Checkov (3.2.517 por digest; NFR-4)
+        run: |
+          docker run --rm \
+            -v "${PWD}:/workspace:ro" \
+            bridgecrew/checkov:3.2.517@sha256:34c97d3e49a6003bbf11ab5353ebcf609cdba95b94d09f61983bdf683035a967 \
+            -d /workspace/infra/terraform \
+            --framework terraform \
+            --compact \
+            --quiet
+
+  # -------------------------------------------------------------------------
+  # 5. Job resumen obligatorio en el ruleset de main (A-11, Requisito 7.1)
+  # -------------------------------------------------------------------------
+  ci:
+    needs:
+      - changes
+      - backend
+      - compose
+      - infra
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verificar que ningún job requerido falló ni fue cancelado
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          RUN_BACKEND: ${{ needs.changes.outputs.backend }}
+          RUN_COMPOSE: ${{ needs.changes.outputs.compose }}
+          RUN_INFRA: ${{ needs.changes.outputs.infra }}
+          BACKEND_RESULT: ${{ needs.backend.result }}
+          COMPOSE_RESULT: ${{ needs.compose.result }}
+          INFRA_RESULT: ${{ needs.infra.result }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import sys
+
+          changes_res = os.environ["CHANGES_RESULT"]
+          if changes_res != "success":
+              print(f"ERROR: changes terminó en {changes_res}")
+              sys.exit(1)
+
+          checks = [
+              ("backend", os.environ["RUN_BACKEND"], os.environ["BACKEND_RESULT"]),
+              ("compose", os.environ["RUN_COMPOSE"], os.environ["COMPOSE_RESULT"]),
+              ("infra", os.environ["RUN_INFRA"], os.environ["INFRA_RESULT"]),
+          ]
+          failed = False
+          for name, needed, result in checks:
+              print(f"{name}: needed={needed} result={result}")
+              if needed not in {"true", "false"}:
+                  print(f"ERROR: salida inválida para {name}: {needed!r}")
+                  failed = True
+              elif needed == "true" and result != "success":
+                  print(f"ERROR: {name} era obligatorio y terminó en {result}")
+                  failed = True
+              elif result in {"failure", "cancelled"}:
+                  print(f"ERROR: {name} terminó en {result}")
+                  failed = True
+
+          sys.exit(1 if failed else 0)
+          PY

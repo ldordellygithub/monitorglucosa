@@ -1,0 +1,1 @@
+modelo-fisico: fase-1a-infraestructura-y-auth solo crea la revisión base vacía de Alembic (sin tablas de negocio); la vista 07 (modelo físico) llega con la spec de sincronización (fase-1b), según design.md · Architecture Views.

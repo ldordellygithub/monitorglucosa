@@ -1,0 +1,86 @@
+# Entorno local de monitorglucosa (ADR 0005, Requisitos 1.1 y 1.2).
+# Arranque: cp .env.example .env && docker compose up --wait
+
+services:
+  postgres:
+    image: postgres:16-alpine@sha256:f2f98726820d0342055351c6e9d36e705f5bfffb3dd53ff556325114b08afb6d
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+      MG_ADMIN_PASSWORD: ${MG_ADMIN_PASSWORD}
+      MG_MIGRATOR_PASSWORD: ${MG_MIGRATOR_PASSWORD}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./dev/postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./scripts/sql/bootstrap.sql:/bootstrap/bootstrap.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 3s
+
+  jwt-issuer:
+    build:
+      context: ./dev/jwt-issuer
+    environment:
+      JWT_ISSUER_URL: ${LOCAL_JWT_ISSUER}
+    ports:
+      - "127.0.0.1:9000:9000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/health', timeout=2)",
+        ]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 2s
+
+  api:
+    build:
+      context: ./backend
+      platforms:
+        - linux/amd64
+    platform: linux/amd64
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT}
+      LOG_LEVEL: ${LOG_LEVEL}
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PORT: ${DATABASE_PORT}
+      DATABASE_NAME: ${DATABASE_NAME}
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_CONNECT_TIMEOUT_S: ${DATABASE_CONNECT_TIMEOUT_S}
+      LOCAL_JWT_ISSUER: ${LOCAL_JWT_ISSUER}
+      LOCAL_JWKS_URL: ${LOCAL_JWKS_URL}
+      LOCAL_JWT_CLIENT_IDS: ${LOCAL_JWT_CLIENT_IDS}
+    ports:
+      - "127.0.0.1:8000:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      jwt-issuer:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)",
+        ]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 3s
+
+volumes:
+  postgres_data:

@@ -50,6 +50,9 @@
           },
           {
             "context": "pr-title"
+          },
+          {
+            "context": "ci"
           }
         ]
       }

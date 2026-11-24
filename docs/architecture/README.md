@@ -8,12 +8,13 @@
 | 2 · Contenedores · C4 nivel 2 | ¿Qué piezas hay y cómo se comunican? | [02-contenedores.svg](svg/02-contenedores.svg) |
 | 3 · Red y despliegue en AWS | ¿Dónde corre cada pieza (VPC, subredes, endpoints, IAM)? | [03-red-y-despliegue.svg](svg/03-red-y-despliegue.svg) |
 | 4 · Componentes · C4 nivel 3 | ¿Cómo están organizados por dentro el backend y el colector? | [04-componentes.svg](svg/04-componentes.svg) |
-| 5 · Secuencia · sincronización de lecturas (fase 1) | ¿En qué orden se sincronizan las lecturas, con reintentos e idempotencia? | [05-secuencia-sincronizacion.svg](svg/05-secuencia-sincronizacion.svg) |
+| 5 · Secuencia · sincronización e importación dual (fase 1) | ¿En qué orden se sincronizan las lecturas (BLE o respaldo local), con reintentos e idempotencia? | [05-secuencia-sincronizacion.svg](svg/05-secuencia-sincronizacion.svg) |
 | 6 · Secuencia · autenticación del colector (T-7) | ¿Cómo obtiene y renueva sus tokens el colector? | [06-secuencia-autenticacion.svg](svg/06-secuencia-autenticacion.svg) |
 | 7 · Modelo conceptual de datos | ¿Qué entidades hay y qué garantiza cada una? | [07-modelo-conceptual.svg](svg/07-modelo-conceptual.svg) |
 | 8 · Flujo de datos, límites de confianza y STRIDE | ¿Por dónde viajan los datos de salud y cómo se protegen en cada límite? | [08-flujo-de-datos.svg](svg/08-flujo-de-datos.svg) |
 | 9 · Ciclo de vida de los datos de salud | ¿Dónde vive cada dato, cuánto se conserva y cómo se borra? | [09-ciclo-de-vida-datos.svg](svg/09-ciclo-de-vida-datos.svg) |
 | 10 · CI/CD · de un cambio a producción | ¿Cómo llega un cambio a producción? | [10-ci-cd.svg](svg/10-ci-cd.svg) |
+| 11 · Observabilidad y respuesta a incidentes | ¿Cómo se detecta un fallo y qué se hace después? | [11-observabilidad.svg](svg/11-observabilidad.svg) |
 
 ## Decisiones de arquitectura (ADR)
 
@@ -24,6 +25,12 @@
 | [0003](../adr/0003-collector-authentication.md) | Autenticación del colector con refresh token de Cognito | Aceptado |
 | [0004](../adr/0004-api-network-without-nat.md) | Acceso de la API a Aurora sin NAT Gateway | Aceptado |
 | [0005](../adr/0005-containerized-local-environment.md) | Entorno local con Docker y la misma imagen de la API en Lambda | Aceptado |
+| [0006](../adr/0006-database-migrations-with-an-in-vpc-migrator-lambda.md) | Migraciones de base de datos con una Lambda `migrator` dentro de la VPC | Aceptado |
+| [0007](../adr/0007-idempotent-sql-bootstrap-through-rds-data-api.md) | Bootstrap SQL idempotente por RDS Data API | Aceptado |
+| [0008](../adr/0008-scoped-deployment-role-and-leak-free-pipeline.md) | Rol de despliegue acotado con *permissions boundary* y pipeline público sin fugas | Aceptado |
+| [0009](../adr/0009-aurora-resume-as-a-retryable-503-within-30-seconds.md) | Reanudación de Aurora con un 503 reintentable dentro del límite de 30 s | Aceptado |
+| [0010](../adr/0010-descriptive-statistics-without-clinical-recommendations.md) | Estadística descriptiva, inventario y patrones objetivos sin recomendaciones clínicas | Aceptado |
+| [0011](../adr/0011-aws-region-us-east-1-for-cost-optimization.md) | Cambio de región de AWS a us-east-1 para optimización de costes | Aceptado |
 
 ## Steering
 

@@ -1,8 +1,8 @@
 # 0002. API en Lambda y Aurora PostgreSQL Serverless v2 con escala a cero
 
-- **Estado:** Aceptado (coste pendiente de validar con la factura real)
-- **Fecha:** registrado el 2026-11-01; precios de la instantánea del 2026-10-31
-- **Decisión relacionada:** `T-3` (opción A1)
+- **Estado:** Aceptado (coste pendiente de validar con la factura real; región actualizada de `sa-east-1` a `us-east-1` por [ADR 0011](0011-aws-region-us-east-1-for-cost-optimization.md))
+- **Fecha:** registrado el 2026-11-01; precios de la instantánea del 2026-10-31; región actualizada el 2026-11-07
+- **Decisión relacionada:** `T-3` (opción A1) y [ADR 0011](0011-aws-region-us-east-1-for-cost-optimization.md)
 
 ## Contexto
 
@@ -14,24 +14,24 @@ Restricciones: presupuesto de nube por debajo de US$20/mes, datos en `sa-east-1`
 - La base de datos es Aurora PostgreSQL Serverless v2 con `MinCapacity` 0 (pausa automática) y `SecondsUntilAutoPause` de 300 s.
 - Versión: Aurora PostgreSQL 16, con versión menor ≥ 16.4. La pausa automática solo existe en versiones menores compatibles: AWS documenta 16.3 o superior, y un hilo de re:Post indica 16.4.
 
-## Cifras (precios de lista de AWS, `sa-east-1`, 2026-10-31)
+## Cifras (precios oficiales de lista de AWS en `us-east-1` tras [ADR 0011](0011-aws-region-us-east-1-for-cost-optimization.md) vs. `sa-east-1` original)
 
-| Escenario | Coste estimado |
-| --- | --- |
-| A1 con uso bajo y escala a cero | ≈ US$4/mes |
-| A1 sin escala a cero | ≈ US$91/mes |
-| Techo del presupuesto | ≈ 79 ACU-h/mes |
-| A2: contenedor + PostgreSQL de instancia fija | ≈ US$37–40/mes |
+| Escenario | Coste estimado en `us-east-1` (vigente) | Coste en `sa-east-1` (anterior) |
+| --- | --- | --- |
+| A1 con uso bajo y escala a cero (`MinCapacity = 0`) + Secrets Manager (US$0,40/mes) + S3/ECR/CloudWatch | **≈ US$2–4/mes** | ≈ US$4/mes |
+| A1 sin escala a cero (0,5 ACU continuos, 730 h/mes) | **≈ US$43,80/mes** (US$0,12/ACU-h) | ≈ US$91,25/mes (US$0,25/ACU-h) |
+| Techo del presupuesto (~US$18/mes para ACU dentro del tope de US$20/mes) | **≈ 150 ACU-h/mes** | ≈ 79 ACU-h/mes |
+| A2: contenedor + PostgreSQL de instancia fija | **> US$25–30/mes** (supera el tope de US$20/mes) | ≈ US$37–40/mes |
 
-No están verificados los costes de CloudFront, S3 y KMS.
+Claves KMS gestionadas por AWS (`aws/rds`, `aws/s3`, `aws/lambda`, `aws/secretsmanager`): US$0/mes de cuota fija; CloudFront y S3 con volumen monousuario: centavos de dólar al mes.
 
 ## Alternativas descartadas
 
 | Alternativa | Motivo del descarte |
 | --- | --- |
-| A2: contenedor + PostgreSQL de instancia fija | ≈ US$37–40/mes, por encima del presupuesto |
-| Base de datos local | Descartada en `T-3` (el steering no registra el motivo) |
-| Aurora sin escala a cero | ≈ US$91/mes |
+| A2: contenedor + PostgreSQL de instancia fija | Supera el presupuesto mensual de US$20/mes |
+| Base de datos local | Descartada en `T-3` (impide acceso web y exige respaldo manual en un único disco) |
+| Aurora sin escala a cero | ≈ US$43,80/mes en `us-east-1` (≈ US$91,25/mes en `sa-east-1`), por encima del presupuesto |
 
 ## Consecuencias
 
