@@ -42,7 +42,8 @@ pythonpath = ["."]
 addopts = ["--strict-markers", "--strict-config", "--import-mode=importlib", "-ra"]
 markers = [
     "req(*criteria): criterios de la spec que verifica la prueba, p. ej. fase-1a:2.5 (los lee kspec trace)",
-    "integration: necesita PostgreSQL real",
+    "integration: necesita PostgreSQL real o Docker",
+    "e2e: pruebas de punta a punta con Docker y Docker Compose",
 ]
 
 [tool.coverage.run]

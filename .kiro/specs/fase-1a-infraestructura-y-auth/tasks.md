@@ -96,7 +96,7 @@ runbook del diseño, no son tareas de código.
   - [x] 11.1 Prueba basada en propiedades: la API cumple su contrato (Schemathesis y comparador)
     - _Property: 8_
     - _Requirements: 2.3, NFR-6_
-- [ ] 12. Crear la imagen, `compose.yaml`, el emisor JWT de pruebas y el arranque local
+- [x] 12. Crear la imagen, `compose.yaml`, el emisor JWT de pruebas y el arranque local
   - `backend/Dockerfile` (multi-etapa, LWA 1.1.0 por digest, CA de RDS, usuario sin privilegios, `CMD` de uvicorn con `--no-access-log`, `linux/amd64` con
     `--provenance=false --sbom=false`), `.dockerignore`, `compose.yaml` con healthchecks, `dev/postgres/init/`,
     `dev/jwt-issuer/` (proyecto uv propio con sus pruebas) y `.env.example`.

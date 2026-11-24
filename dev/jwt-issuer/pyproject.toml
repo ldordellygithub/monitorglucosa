@@ -1,0 +1,43 @@
+[project]
+name = "monitorglucosa-jwt-issuer"
+version = "0.1.0"
+description = "Emisor JWT RS256 efímero de pruebas para el entorno local (ADR 0005)"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "starlette",
+    "uvicorn",
+    "pyjwt[crypto]",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+    "mypy",
+    "httpx2",
+]
+
+[tool.uv]
+package = false
+exclude-newer = "2026-10-19T00:00:00Z"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = ["--strict-markers", "--strict-config", "--import-mode=importlib", "-ra"]
+
+[tool.ruff]
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "S", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.mypy]
+strict = true
+python_version = "3.13"
+files = ["src", "tests"]
+mypy_path = "."
+explicit_package_bases = true
