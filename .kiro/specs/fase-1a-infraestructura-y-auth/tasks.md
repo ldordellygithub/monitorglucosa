@@ -115,7 +115,7 @@ runbook del diseño, no son tareas de código.
   - [x] 14.1 Prueba basada en propiedades: nunca se sirve un digest sin sus migraciones
     - _Property: 6_
     - _Requirements: 7.4, 7.5_
-- [ ] 15. Crear la raíz de Terraform y el módulo `bootstrap`
+- [x] 15. Crear la raíz de Terraform y el módulo `bootstrap`
   - Versiones fijadas (Terraform 1.16.6, proveedor AWS 6.69.1 en `us-east-1`), `default_tags`, backend S3 con `use_lockfile = true`,
     bucket del estado, proveedor OIDC, rol `monitorglucosa-deploy` con su política (`aws:RequestedRegion = us-east-1`, ADR 0008, ADR 0011) y el *permissions boundary*, y ECR
     (etiquetas inmutables, escaneo, 10 imágenes). `terraform test` con proveedores simulados.
