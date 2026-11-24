@@ -85,7 +85,7 @@ runbook del diseño, no son tareas de código.
   - Pruebas de integración: `upgrade head` → `downgrade base` → `upgrade head`; `mg_api` no puede `CREATE TABLE` y
     `mg_migrator` sí.
   - _Requirements: 5.3, 7.1, 7.4_
-  - [ ] 10.1 Prueba basada en propiedades: el bootstrap SQL es idempotente (n ejecuciones como no superusuario)
+  - [x] 10.1 Prueba basada en propiedades: el bootstrap SQL es idempotente (n ejecuciones como no superusuario)
     - _Property: 7_
     - _Requirements: 5.3_
 - [ ] 11. Construir y publicar el contrato OpenAPI y la referencia de la API
