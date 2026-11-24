@@ -97,7 +97,7 @@ jobs:
 
           backend_re = re.compile(
               r"^(backend/|dev/jwt-issuer/|dev/postgres/|scripts/|docs/api/README\.md$|"
-              r"\.kiro/specs/[^/]+/openapi\.yaml$|\.github/workflows/ci\.yml$|"
+              r"\.kiro/specs/[^/]+/openapi\.yaml$|\.github/workflows/(ci|deploy)\.yml$|"
               r"\.github/rulesets/main\.json$|\.python-version$)"
           )
           compose_re = re.compile(

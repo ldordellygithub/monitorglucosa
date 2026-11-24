@@ -145,7 +145,7 @@ runbook del diseño, no son tareas de código.
     dependency review, comparación de `openapi.json` y checkov; editar `.github/rulesets/main.json` (se aplica con
     `kspec github apply`, con confirmación del propietario).
   - _Requirements: 7.1, NFR-4, NFR-5_
-- [ ] 22. Crear `deploy.yml`
+- [x] 22. Crear `deploy.yml`
   - Jobs `build` (sin AWS) y `deploy` (`environment: prod`, `concurrency`, OIDC) que ejecuta `scripts/deploy.py`. Depende
     de que `G-2` (revisor del entorno `prod`) esté resuelta en el kit.
   - _Requirements: 7.2, 7.3, 7.4, 7.5_

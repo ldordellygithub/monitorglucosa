@@ -110,6 +110,6 @@ con la nota (specs, ADR y verificación). Correcciones posteriores: `vX.Y.Z`.
 | ID | Pregunta | Estado | Resolución o pendiente | Bloquea |
 | --- | --- | --- | --- | --- |
 | G-1 | ¿Usuario de GitHub propietario del repositorio? | **Decidido** | `ldordellygithub`; commits con `112001988+ldordellygithub@users.noreply.github.com` (el correo personal no se publica) | Ninguno |
-| G-2 | ¿Cómo se declara el revisor del entorno `prod`? | **Abierto** | `kspec github apply` no gestiona revisores: ampliarlo en el kit (recomendado) o configurarlo una vez en GitHub y anotarlo | Primer despliegue (fase 1) |
+| G-2 | ¿Cómo se declara el revisor del entorno `prod`? | **Decidido** | Configurado `ldordellygithub` como `required_reviewers` (`prevent_self_review: false`) directamente en el entorno `prod` de GitHub el 2026-11-24; pendiente solo si a futuro se amplía `kspec github` | Resuelto |
 | G-3 | ¿Firmar commits si entra un colaborador? | **Abierto** | Revisar entonces junto con A-3 y A-4 | Ninguno hoy |
 | G-4 | ¿Validar en CI los mensajes de cada commit? | *Propuesto* | Con rebase, el hook local es el único control y `--no-verify` lo salta: job `commits` en `/ci-setup` | Ninguno hoy |

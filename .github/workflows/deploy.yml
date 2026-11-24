@@ -1,0 +1,241 @@
+# Despliegue continuo a prod en us-east-1 (Requisitos 7.2, 7.3, 7.4, 7.5, NFR-5;
+# design.md · Pipeline y scripts, D2, D3, D4, D5, ADR 0006, ADR 0007, ADR 0008, ADR 0011).
+# Job `build`: sin acceso a AWS; construye la imagen linux/amd64, la prueba con Compose y la guarda.
+# Job `deploy`: espera aprobación manual del revisor de `prod`, asume el rol OIDC y ejecuta deploy.py.
+name: deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/**"
+      - "infra/**"
+      - "scripts/**"
+      - "compose.yaml"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # -------------------------------------------------------------------------
+  # 1. Construcción y prueba E2E de la imagen única (SIN acceso a AWS)
+  # -------------------------------------------------------------------------
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      tar_sha256: ${{ steps.save_image.outputs.tar_sha256 }}
+      image_tag: ${{ steps.save_image.outputs.image_tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.5"
+          enable-cache: true
+          python-version: "3.13"
+
+      - name: Construir imagen única (linux/amd64 sin provenance ni sbom; D5)
+        env:
+          IMAGE_TAG: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          docker build \
+            --platform linux/amd64 \
+            --provenance=false \
+            --sbom=false \
+            -t "monitorglucosa-api:${IMAGE_TAG}" \
+            backend
+
+      - name: Probar exactamente la imagen construida con Docker Compose (--wait y /health; D5, 7.3)
+        env:
+          IMAGE_TAG: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          OVERRIDE="${RUNNER_TEMP}/compose-image.yml"
+          cat > "${OVERRIDE}" <<EOF
+          services:
+            api:
+              image: monitorglucosa-api:${IMAGE_TAG}
+          EOF
+          cp .env.example .env
+          trap 'docker compose -f compose.yaml -f "${OVERRIDE}" down -v --remove-orphans || true; rm -f .env "${OVERRIDE}"' EXIT
+          docker compose build jwt-issuer
+          docker compose -f compose.yaml -f "${OVERRIDE}" up -d --no-build --wait
+          curl -fsS http://127.0.0.1:8000/health | grep -q '"ok"'
+
+      - name: Pruebas punta a punta contra Docker y Compose
+        run: |
+          set -euo pipefail
+          uv --directory backend sync --locked
+          uv --directory backend run pytest -m e2e
+
+      - name: Empaquetar exactamente la imagen probada (docker save + SHA-256)
+        id: save_image
+        env:
+          IMAGE_TAG: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/image-artifact"
+          docker save "monitorglucosa-api:${IMAGE_TAG}" | gzip -1 > "${RUNNER_TEMP}/image-artifact/api-image.tar.gz"
+          TAR_SHA256="$(sha256sum "${RUNNER_TEMP}/image-artifact/api-image.tar.gz" | awk '{print $1}')"
+          printf 'tar_sha256=%s\n' "${TAR_SHA256}" >> "${GITHUB_OUTPUT}"
+          printf 'image_tag=%s\n' "${IMAGE_TAG}" >> "${GITHUB_OUTPUT}"
+
+      - name: Subir artefacto temporal de la imagen (sin secretos ni planes)
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: monitorglucosa-api-image
+          path: ${{ runner.temp }}/image-artifact/api-image.tar.gz
+          retention-days: 3
+          if-no-files-found: error
+
+  # -------------------------------------------------------------------------
+  # 2. Despliegue a prod tras aprobación manual (OIDC + deploy.py; ADR 0008)
+  # -------------------------------------------------------------------------
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: prod
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Instalar herramientas y dependencias de runtime ANTES de solicitar credenciales OIDC
+      # y sin restaurar caché compartida con jobs no privilegiados (OWASP CI/CD-SEC-6).
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: "1.16.6"
+          terraform_wrapper: false
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "0.13.5"
+          enable-cache: false
+          python-version: "3.13"
+
+      - name: Sincronizar dependencias de despliegue (--locked --no-dev, antes de OIDC)
+        run: |
+          set -euo pipefail
+          uv --directory scripts sync --locked --no-dev
+
+      - name: Descargar artefacto de la imagen construida en build
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: monitorglucosa-api-image
+          path: ${{ runner.temp }}/image-artifact
+
+      - name: Verificar integridad SHA-256 y cargar la imagen en Docker
+        env:
+          EXPECTED_SHA256: ${{ needs.build.outputs.tar_sha256 }}
+        run: |
+          set -euo pipefail
+          if [[ ! "${EXPECTED_SHA256}" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "ERROR: tar_sha256 de build no cumple formato SHA-256." >&2
+            exit 1
+          fi
+          ARCHIVE="${RUNNER_TEMP}/image-artifact/api-image.tar.gz"
+          printf '%s  %s\n' "${EXPECTED_SHA256}" "${ARCHIVE}" | sha256sum -c -
+          gunzip -c "${ARCHIVE}" | docker load >/dev/null
+          rm -f "${ARCHIVE}"
+
+      - name: Autenticar en AWS vía OIDC (sin claves de larga duración; Requisito 7.2)
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+          role-session-name: monitorglucosa-deploy
+          mask-aws-account-id: true
+
+      - name: Inicializar backend S3 de Terraform sin exponer el bucket (ADR 0008)
+        env:
+          TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TF_STATE_BUCKET}" ]; then
+            echo "ERROR: falta el secreto TF_STATE_BUCKET en el entorno prod." >&2
+            exit 1
+          fi
+          if ! terraform -chdir=infra/terraform init \
+            -input=false \
+            -no-color \
+            -backend-config="bucket=${TF_STATE_BUCKET}" >/dev/null 2>&1; then
+            echo "ERROR: falló terraform init contra el backend S3." >&2
+            exit 1
+          fi
+
+      - name: Subir imagen inmutable a ECR y obtener su digest sha256 (D5, NFR-5)
+        id: push_ecr
+        env:
+          IMAGE_TAG: ${{ needs.build.outputs.image_tag }}
+          DEPLOY_ATTEMPT: ${{ github.run_attempt }}
+          AWS_REGION: us-east-1
+          ECR_REPOSITORY: monitorglucosa-api
+        run: |
+          set -euo pipefail
+          if [[ ! "${IMAGE_TAG}" =~ ^[0-9a-f]{40}-[0-9]+-[0-9]+$ ]]; then
+            echo "ERROR: IMAGE_TAG no cumple el formato esperado." >&2
+            exit 1
+          fi
+          if [[ ! "${DEPLOY_ATTEMPT}" =~ ^[0-9]+$ ]]; then
+            echo "ERROR: DEPLOY_ATTEMPT no es numérico." >&2
+            exit 1
+          fi
+
+          ACCOUNT_ID="$(aws sts get-caller-identity --region "${AWS_REGION}" --query Account --output text)"
+          if [[ ! "${ACCOUNT_ID}" =~ ^[0-9]{12}$ ]]; then
+            echo "ERROR: STS no devolvió un ID de cuenta AWS válido de 12 dígitos." >&2
+            exit 1
+          fi
+          ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          printf '::add-mask::%s\n' "${ACCOUNT_ID}"
+          printf '::add-mask::%s\n' "${ECR_REGISTRY}"
+          trap 'docker logout "${ECR_REGISTRY}" >/dev/null 2>&1 || true' EXIT
+
+          aws ecr get-login-password --region "${AWS_REGION}" \
+            | docker login --username AWS --password-stdin "${ECR_REGISTRY}" >/dev/null 2>&1
+
+          ECR_TAG="${IMAGE_TAG}-d${DEPLOY_ATTEMPT}"
+          LOCAL_REF="monitorglucosa-api:${IMAGE_TAG}"
+          REMOTE_REF="${ECR_REGISTRY}/${ECR_REPOSITORY}:${ECR_TAG}"
+          docker tag "${LOCAL_REF}" "${REMOTE_REF}"
+          docker push --quiet "${REMOTE_REF}" >/dev/null
+
+          IMAGE_DIGEST="$(aws ecr describe-images \
+            --region "${AWS_REGION}" \
+            --repository-name "${ECR_REPOSITORY}" \
+            --image-ids "imageTag=${ECR_TAG}" \
+            --query 'imageDetails[0].imageDigest' \
+            --output text)"
+
+          if [[ ! "${IMAGE_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "ERROR: ECR no devolvió un digest sha256 válido." >&2
+            exit 1
+          fi
+          echo "Imagen subida a ECR con digest inmutable verificado."
+          printf 'image_digest=%s\n' "${IMAGE_DIGEST}" >> "${GITHUB_OUTPUT}"
+
+      - name: Ejecutar despliegue en dos fases, migraciones, humo y vuelta atrás (scripts/deploy.py)
+        env:
+          IMAGE_DIGEST: ${{ steps.push_ecr.outputs.image_digest }}
+          AWS_REGION: us-east-1
+        run: |
+          set -euo pipefail
+          uv --directory scripts run --no-sync python deploy.py \
+            --digest "${IMAGE_DIGEST}" \
+            --region "${AWS_REGION}"
