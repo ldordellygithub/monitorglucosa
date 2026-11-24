@@ -260,9 +260,20 @@ run "modulo_bootstrap_cumple_s3_oidc_iam_ecr_y_etiquetas" {
         s.Effect == "Allow" &&
         try(s.Condition.StringEquals["kms:ViaService"], "") == "ssm.us-east-1.amazonaws.com" &&
         try(s.Condition.StringEquals["kms:EncryptionContext:PARAMETER_ARN"], "") == "arn:aws:ssm:us-east-1:123456789012:parameter/monitorglucosa/prod/owner-email"
+      ]) == 1 &&
+      length([
+        for s in jsondecode(aws_iam_policy.deploy_infra_edge.policy).Statement : s
+        if s.Sid == "ManageProjectSiteBucket" &&
+        contains(s.Action, "s3:PutObjectTagging") &&
+        contains(s.Action, "s3:GetObjectTagging")
+      ]) == 1 &&
+      length([
+        for s in jsondecode(aws_iam_policy.deploy_read.policy).Statement : s
+        if s.Sid == "ApiGatewayV2AccessLogDelivery" &&
+        contains(s.Action, "logs:CreateLogDelivery")
       ]) == 1
     )
-    error_message = "DecryptOwnerEmailParameterViaSsm debe exigir kms:ViaService=ssm.us-east-1.amazonaws.com y kms:EncryptionContext:PARAMETER_ARN exacto."
+    error_message = "deploy_infra_edge y deploy_read deben acotar KMS por PARAMETER_ARN, permitir tagging S3 del sitio y Vended Logs de HTTP API v2."
   }
 
   # --- Requisito 6.1: ECR inmutable, escaneo al subir, AES256, 10 imágenes y política Lambda ---

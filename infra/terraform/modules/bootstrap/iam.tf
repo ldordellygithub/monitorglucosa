@@ -265,6 +265,7 @@ resource "aws_iam_policy" "deploy_core" {
           "iam:ListAttachedRolePolicies",
           "iam:ListInstanceProfilesForRole",
           "iam:ListRolePolicies",
+          "iam:ListRoleTags",
         ]
         Resource  = local.workload_role_arns
         Condition = local.region_condition
@@ -293,6 +294,7 @@ resource "aws_iam_policy" "deploy_core" {
           "iam:ListInstanceProfilesForRole",
           "iam:ListPolicyVersions",
           "iam:ListRolePolicies",
+          "iam:ListRoleTags",
         ]
         Resource = [
           local.oidc_provider_arn,
@@ -606,6 +608,8 @@ resource "aws_iam_policy" "deploy_infra_edge" {
           "s3:DeleteBucket",
           "s3:DeleteBucketPolicy",
           "s3:DeleteObject",
+          "s3:DeleteObjectTagging",
+          "s3:DeleteObjectVersion",
           "s3:GetAccelerateConfiguration",
           "s3:GetBucketAcl",
           "s3:GetBucketCORS",
@@ -622,6 +626,9 @@ resource "aws_iam_policy" "deploy_infra_edge" {
           "s3:GetEncryptionConfiguration",
           "s3:GetLifecycleConfiguration",
           "s3:GetObject",
+          "s3:GetObjectTagging",
+          "s3:GetObjectVersion",
+          "s3:GetObjectVersionTagging",
           "s3:GetReplicationConfiguration",
           "s3:ListBucket",
           "s3:PutBucketOwnershipControls",
@@ -632,6 +639,7 @@ resource "aws_iam_policy" "deploy_infra_edge" {
           "s3:PutEncryptionConfiguration",
           "s3:PutLifecycleConfiguration",
           "s3:PutObject",
+          "s3:PutObjectTagging",
         ]
         Resource = [
           "arn:aws:s3:::${var.project}-site-${var.account_id}",
@@ -643,29 +651,16 @@ resource "aws_iam_policy" "deploy_infra_edge" {
         Sid    = "ManageProjectCloudFrontSite"
         Effect = "Allow"
         Action = [
-          "cloudfront:CreateDistribution",
-          "cloudfront:CreateOriginAccessControl",
-          "cloudfront:CreateResponseHeadersPolicy",
           "cloudfront:DeleteDistribution",
-          "cloudfront:DeleteOriginAccessControl",
-          "cloudfront:DeleteResponseHeadersPolicy",
           "cloudfront:GetDistribution",
           "cloudfront:GetDistributionConfig",
-          "cloudfront:GetOriginAccessControl",
-          "cloudfront:GetOriginAccessControlConfig",
-          "cloudfront:GetResponseHeadersPolicy",
-          "cloudfront:GetResponseHeadersPolicyConfig",
           "cloudfront:ListTagsForResource",
           "cloudfront:TagResource",
           "cloudfront:UntagResource",
           "cloudfront:UpdateDistribution",
-          "cloudfront:UpdateOriginAccessControl",
-          "cloudfront:UpdateResponseHeadersPolicy",
         ]
         Resource = [
           "arn:aws:cloudfront::${var.account_id}:distribution/*",
-          "arn:aws:cloudfront::${var.account_id}:origin-access-control/*",
-          "arn:aws:cloudfront::${var.account_id}:response-headers-policy/*",
         ]
         Condition = local.region_condition
       },
@@ -734,9 +729,10 @@ resource "aws_iam_role_policy_attachment" "deploy_infra_edge" {
 # ---------------------------------------------------------------------------
 
 resource "aws_iam_policy" "deploy_read" {
-  # checkov:skip=CKV_AWS_356:Excepciones NFR-4 #1 y #3 (ADR 0008): ecr:GetAuthorizationToken y acciones Describe*/List* de solo lectura no admiten acotación por recurso en AWS.
+  # checkov:skip=CKV_AWS_111:Acciones de control plane sin soporte de ARN por recurso en AWS (CloudWatch Vended Logs para HTTP API v2 y creación/OAC/cabeceras de CloudFront), acotadas a aws:RequestedRegion=us-east-1 (ADR 0008).
+  # checkov:skip=CKV_AWS_356:Excepciones documentadas de NFR-4 (ADR 0008): ecr:GetAuthorizationToken, acciones Describe*/List*, Vended Logs de API Gateway v2 y acciones CloudFront que AWS no permite acotar por recurso.
   name        = local.deploy_read_policy_name
-  description = "Excepciones NFR-4 #1 y #3 enumeradas para el rol monitorglucosa-deploy (ADR 0008)."
+  description = "Acciones sin soporte de acotación por recurso en AWS para el rol monitorglucosa-deploy (ADR 0008)."
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -780,6 +776,45 @@ resource "aws_iam_policy" "deploy_read" {
           "rds:DescribeDBInstances",
           "rds:DescribeDBSubnetGroups",
           "sns:ListTopics",
+        ]
+        Resource  = "*"
+        Condition = local.region_condition
+      },
+      # CloudWatch Vended Logs exigidos por AWS para activar access_log_settings en HTTP API v2
+      # (AWS IAM no admite acotación por recurso en estas 7 acciones).
+      {
+        Sid    = "ApiGatewayV2AccessLogDelivery"
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogDelivery",
+          "logs:DeleteLogDelivery",
+          "logs:DescribeResourcePolicies",
+          "logs:GetLogDelivery",
+          "logs:ListLogDeliveries",
+          "logs:PutResourcePolicy",
+          "logs:UpdateLogDelivery",
+        ]
+        Resource  = "*"
+        Condition = local.region_condition
+      },
+      # Acciones de creación de distribución y gestión de OAC/ResponseHeadersPolicy en CloudFront
+      # que AWS IAM no permite acotar a un ARN específico.
+      {
+        Sid    = "CloudFrontUnscopableControlPlane"
+        Effect = "Allow"
+        Action = [
+          "cloudfront:CreateDistribution",
+          "cloudfront:CreateDistributionWithTags",
+          "cloudfront:CreateOriginAccessControl",
+          "cloudfront:CreateResponseHeadersPolicy",
+          "cloudfront:DeleteOriginAccessControl",
+          "cloudfront:DeleteResponseHeadersPolicy",
+          "cloudfront:GetOriginAccessControl",
+          "cloudfront:GetOriginAccessControlConfig",
+          "cloudfront:GetResponseHeadersPolicy",
+          "cloudfront:GetResponseHeadersPolicyConfig",
+          "cloudfront:UpdateOriginAccessControl",
+          "cloudfront:UpdateResponseHeadersPolicy",
         ]
         Resource  = "*"
         Condition = local.region_condition

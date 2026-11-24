@@ -67,6 +67,17 @@ output "cognito_domain_prefix" {
   value       = module.identity.domain_prefix
 }
 
+output "api_endpoint" {
+  description = "URL base HTTPS de la HTTP API de API Gateway (usada por scripts/deploy.py y smoke_test.py)."
+  value       = module.api.api_endpoint
+  sensitive   = true
+}
+
+output "site_domain" {
+  description = "Dominio HTTPS de CloudFront del sitio estático."
+  value       = module.site.site_domain
+}
+
 output "api_image_digest" {
   description = "Digest sha256 actualmente desplegado en la Lambda api (vacío antes del primer despliegue para que deploy.py detecte primer_despliegue=si)."
   value       = var.api_image_digest != null ? var.api_image_digest : ""

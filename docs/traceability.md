@@ -8,15 +8,15 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 
 | Fase | Spec | Estado | Criterios | Con prueba | Manuales | Sin verificar | Cobertura |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | [fase-1a-infraestructura-y-auth](#fase-1a-infraestructura-y-auth) | en curso | 45 | 33 | 0 | 12 | 73 % |
+| 1 | [fase-1a-infraestructura-y-auth](#fase-1a-infraestructura-y-auth) | en curso | 45 | 38 | 0 | 7 | 84 % |
 
 | Fase | Specs | Criterios verificados |
 | --- | --- | --- |
-| 1 | 1 | 33/45 (73 %) |
+| 1 | 1 | 38/45 (84 %) |
 
 ## fase-1a-infraestructura-y-auth
 
-[Requisitos](../.kiro/specs/fase-1a-infraestructura-y-auth/requirements.md) · [Diseño](../.kiro/specs/fase-1a-infraestructura-y-auth/design.md) · [Tareas](../.kiro/specs/fase-1a-infraestructura-y-auth/tasks.md) · 33/45 criterios verificados (73 %) · en curso · tareas 25/33
+[Requisitos](../.kiro/specs/fase-1a-infraestructura-y-auth/requirements.md) · [Diseño](../.kiro/specs/fase-1a-infraestructura-y-auth/design.md) · [Tareas](../.kiro/specs/fase-1a-infraestructura-y-auth/tasks.md) · 38/45 criterios verificados (84 %) · en curso · tareas 26/33
 
 | Requisito | Criterio | Componentes | Decisiones | Tareas | Pruebas | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -38,17 +38,17 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 | 4 | 4.2 | Módulo `identity`, autorizador JWT del módulo `api` | D11, D12, ADR 0003, ADR 0011, T-7 | 17 ✓, 23 ○ | `infra/terraform/tests/verify_identity.sh` | ⚠️ |
 | 4 | 4.3 | Módulo `identity`, autorizador JWT del módulo `api` | D11, D12, ADR 0003, ADR 0011, T-7 | 17 ✓ | `infra/terraform/tests/verify_identity.sh` | ✅ |
 | 4 | 4.4 | Módulo `identity`, autorizador JWT del módulo `api` | D11, D12, ADR 0003, ADR 0011, T-7 | 17 ✓ | `infra/terraform/tests/verify_identity.sh` | ✅ |
-| 4 | 4.5 | Módulo `identity`, autorizador JWT del módulo `api` | D11, D12, ADR 0003, ADR 0011, T-7 | 18 ○, 23 ○, 24 ○ | — | ❌ |
+| 4 | 4.5 | Módulo `identity`, autorizador JWT del módulo `api` | D11, D12, ADR 0003, ADR 0011, T-7 | 18 ✓, 23 ○, 24 ○ | `infra/terraform/tests/verify_api_site.sh` | ⚠️ |
 | **5** · Red y base de datos en AWS | 5.1 | Módulos `network` y `database` | D13, ADR 0002, ADR 0004, ADR 0011 | 16 ✓, 24 ○ | `infra/terraform/tests/verify_network_database.sh` | ⚠️ |
 | 5 | 5.2 | Módulos `network` y `database` | D13, ADR 0002, ADR 0004, ADR 0011 | 16 ✓ | `infra/terraform/tests/verify_network_database.sh` | ✅ |
 | 5 | 5.3 | `infrastructure.db.engine`, `scripts/sql/bootstrap.sql`, `scripts/db_bootstrap.py` | D3, D8 | 2 ✓, 9 ✓, 10 ✓, 10.1 ✓, 23 ○ | `backend/tests/integration/test_bootstrap_properties.py::test_bootstrap_sql_es_idempotente_para_cualquier_n_ejecuciones`<br>`backend/tests/integration/test_migrations_integration.py::test_bootstrap_roles_y_privilegios_minimos_en_postgres_16`<br>`backend/tests/unit/test_health.py::test_create_engine_ca_bundle_sets_ssl_context`<br>`backend/tests/unit/test_health.py::test_create_engine_prod_configures_iam_token_and_verify_full`<br>`backend/tests/unit/test_health.py::test_create_engine_raises_filenotfound_when_ca_bundle_missing`<br>`backend/tests/unit/test_migrator.py::test_bootstrap_sql_es_un_unico_bloque_do_y_cabe_en_data_api`<br>`backend/tests/unit/test_migrator.py::test_migrator_en_prod_construye_database_config_sin_contrasena`<br>`scripts/tests/test_db_bootstrap.py::test_bootstrap_ejecuta_data_api_con_continue_after_timeout_y_sql_real` | ⚠️ |
 | 5 | 5.4 | `infrastructure.db.engine`, `SqlDatabaseProbe` | D8, ADR 0004 | 4 ✓, 9 ✓, 23 ○ | `backend/tests/unit/test_health.py::test_create_engine_uses_nullpool_and_connect_timeout`<br>`backend/tests/unit/test_health.py::test_sql_database_probe_executes_select_1` | ⚠️ |
 | 5 | 5.5 | Módulos `network` y `database` | D13, ADR 0002, ADR 0004, ADR 0011 | 16 ✓ | `infra/terraform/tests/verify_network_database.sh` | ✅ |
-| **6** · Exposición de la API y del sitio | 6.1 | Módulos `api` y `site`, `bootstrap` (ECR) | D13, ADR 0004, ADR 0005 | 15 ✓, 18 ○ | `infra/terraform/tests/verify_bootstrap.sh` | ⚠️ |
-| 6 | 6.2 | Módulos `api` y `site`, `bootstrap` (ECR) | D13, ADR 0004, ADR 0005 | 18 ○, 24 ○ | — | ❌ |
-| 6 | 6.3 | Módulos `api` y `site`, `bootstrap` (ECR) | D13, ADR 0004, ADR 0005 | 18 ○, 23 ○ | — | ❌ |
-| 6 | 6.4 | Módulos `api` y `site`, `bootstrap` (ECR) | D13, ADR 0004, ADR 0005 | 18 ○ | — | ❌ |
-| 6 | 6.5 | Módulos `api` y `site`, `bootstrap` (ECR) | D13, ADR 0004, ADR 0005 | 18 ○ | — | ❌ |
+| **6** · Exposición de la API y del sitio | 6.1 | Módulos `api` y `site`, `bootstrap` (ECR) | D13, ADR 0004, ADR 0005 | 15 ✓, 18 ✓ | `infra/terraform/tests/verify_api_site.sh`<br>`infra/terraform/tests/verify_bootstrap.sh` | ✅ |
+| 6 | 6.2 | Módulos `api` y `site`, `bootstrap` (ECR) | D13, ADR 0004, ADR 0005 | 18 ✓, 24 ○ | `infra/terraform/tests/verify_api_site.sh` | ⚠️ |
+| 6 | 6.3 | Módulos `api` y `site`, `bootstrap` (ECR) | D13, ADR 0004, ADR 0005 | 18 ✓, 23 ○ | `infra/terraform/tests/verify_api_site.sh` | ⚠️ |
+| 6 | 6.4 | Módulos `api` y `site`, `bootstrap` (ECR) | D13, ADR 0004, ADR 0005 | 18 ✓ | `infra/terraform/tests/verify_api_site.sh` | ✅ |
+| 6 | 6.5 | Módulos `api` y `site`, `bootstrap` (ECR) | D13, ADR 0004, ADR 0005 | 18 ✓ | `infra/terraform/tests/verify_api_site.sh` | ✅ |
 | **7** · Integración y despliegue continuo | 7.1 | `.github/workflows/ci.yml`, `.github/rulesets/main.json`, `backend/tools/export_openapi.py` | D15 | 10 ✓, 11 ✓, 21 ○ | `backend/tests/contract/test_openapi_contract.py::test_export_openapi_check_falla_si_un_archivo_difiere`<br>`backend/tests/contract/test_openapi_contract.py::test_openapi_json_y_docs_api_readme_estan_al_dia`<br>`backend/tests/integration/test_migrations_integration.py::test_alembic_upgrade_downgrade_upgrade_y_migrator_app_real`<br>`backend/tests/unit/test_migrator.py::test_metadata_usa_esquema_app_y_convencion_de_nombres` | ⚠️ |
 | 7 | 7.2 | Módulo `bootstrap` (OIDC), `.github/workflows/deploy.yml` | D1, D4, ADR 0008, ADR 0011, G-2 | 3 ✓, 15 ✓, 22 ○ | `infra/terraform/tests/verify_bootstrap.sh` | ⚠️ |
 | 7 | 7.3 | Módulo `bootstrap` (OIDC), `.github/workflows/deploy.yml` | D1, D4, ADR 0008, ADR 0011, G-2 | 22 ○, 23 ○ | — | ❌ |

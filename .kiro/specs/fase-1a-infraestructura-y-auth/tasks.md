@@ -128,7 +128,7 @@ runbook del diseño, no son tareas de código.
   - User pool Essentials en `us-east-1` con MFA TOTP, sin registro propio, clientes `web` (refresh de 1 día) y `collector` (30 días,
     rotación y `retry_grace_period_seconds`), dominio de prefijo y usuario propietario con correo de Parameter Store.
   - _Requirements: 4.1, 4.2, 4.3, 4.4_
-- [ ] 18. Crear los módulos `api` y `site`
+- [x] 18. Crear los módulos `api` y `site`
   - Lambdas `api` y `migrator` por digest, HTTP API con autorizador JWT y ámbito `openid`, ruta IAM para
     `/health/ready`, throttling 10/20, CORS, logs de acceso, permisos con `source_arn`, y S3 + CloudFront con OAC, HSTS
     y CSP.

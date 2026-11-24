@@ -23,10 +23,19 @@ run "raiz_conecta_modulo_identity_y_expone_prefijo_dominio" {
   command = plan
 
   override_resource {
+    target          = module.site.aws_cloudfront_distribution.site
+    override_during = plan
+    values = {
+      domain_name = "d111111abcdef8.cloudfront.net"
+    }
+  }
+
+  override_resource {
     target          = module.identity.aws_cognito_user_pool.main
     override_during = plan
     values = {
-      id = "us-east-1_AbCdEfGhI"
+      id       = "us-east-1_AbCdEfGhI"
+      endpoint = "cognito-idp.us-east-1.amazonaws.com/us-east-1_AbCdEfGhI"
     }
   }
 
@@ -34,9 +43,11 @@ run "raiz_conecta_modulo_identity_y_expone_prefijo_dominio" {
     condition = (
       can(regex("^monitorglucosa-[0-9a-f]{8}$", output.cognito_domain_prefix)) &&
       !strcontains(output.cognito_domain_prefix, "123456789012") &&
-      output.cognito_domain_prefix != "monitorglucosa-${substr(sha256("123456789012-monitorglucosa"), 0, 8)}"
+      output.cognito_domain_prefix != "monitorglucosa-${substr(sha256("123456789012-monitorglucosa"), 0, 8)}" &&
+      output.site_domain == "d111111abcdef8.cloudfront.net" &&
+      !strcontains(output.site_domain, "placeholder")
     )
-    error_message = "El prefijo de dominio Cognito debe tener formato monitorglucosa-<8 hex> sin correlación con el ID de cuenta."
+    error_message = "El prefijo de dominio Cognito debe tener formato monitorglucosa-<8 hex> sin correlación con account_id y conectado al dominio real de CloudFront."
   }
 }
 
