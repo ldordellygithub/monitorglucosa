@@ -108,7 +108,7 @@ runbook del diseño, no son tareas de código.
 
 ## Despliegue e infraestructura
 
-- [ ] 14. Implementar `deploy.py`, `db_bootstrap.py` y `smoke_test.py`
+- [x] 14. Implementar `deploy.py`, `db_bootstrap.py` y `smoke_test.py`
   - `Runner` inyectable; secuencia en dos fases con comprobación de `D_prev` en ECR, espera `function-active-v2`,
     migración, humo con reintentos (hasta 120 s, `Retry-After`) y vuelta atrás; enmascaramiento del ID de cuenta.
   - _Requirements: 7.4, 7.5, NFR-2_
