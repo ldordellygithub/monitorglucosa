@@ -52,6 +52,21 @@ output "cluster_resource_id" {
   sensitive   = true
 }
 
+output "cognito_web_client_id" {
+  description = "ID del cliente público web de Cognito."
+  value       = module.identity.web_client_id
+}
+
+output "cognito_collector_client_id" {
+  description = "ID del cliente público collector de Cognito."
+  value       = module.identity.collector_client_id
+}
+
+output "cognito_domain_prefix" {
+  description = "Prefijo del dominio alojado de Cognito."
+  value       = module.identity.domain_prefix
+}
+
 output "api_image_digest" {
   description = "Digest sha256 actualmente desplegado en la Lambda api (vacío antes del primer despliegue para que deploy.py detecte primer_despliegue=si)."
   value       = var.api_image_digest != null ? var.api_image_digest : ""

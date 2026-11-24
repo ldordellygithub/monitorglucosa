@@ -303,7 +303,7 @@ resource "aws_iam_policy" "deploy_core" {
         ]
         Condition = local.region_condition
       },
-      # Operaciones de despliegue: migrator (ADR 0006), humo SigV4 (7.5), SSM (D11) y Data API (ADR 0007).
+      # Operaciones de despliegue: migrator (ADR 0006), humo SigV4 (7.5) y Data API (ADR 0007).
       {
         Sid       = "InvokeMigratorLambda"
         Effect    = "Allow"
@@ -316,13 +316,6 @@ resource "aws_iam_policy" "deploy_core" {
         Effect    = "Allow"
         Action    = ["execute-api:Invoke"]
         Resource  = ["arn:aws:execute-api:${var.region}:${var.account_id}:*/*/GET/health/ready"]
-        Condition = local.region_condition
-      },
-      {
-        Sid       = "ReadOwnerEmailParameter"
-        Effect    = "Allow"
-        Action    = ["ssm:GetParameter"]
-        Resource  = ["arn:aws:ssm:${var.region}:${var.account_id}:parameter${var.owner_email_parameter}"]
         Condition = local.region_condition
       },
       {
@@ -573,7 +566,6 @@ resource "aws_iam_policy" "deploy_infra_edge" {
           "cognito-idp:DeleteUserPoolDomain",
           "cognito-idp:DescribeUserPool",
           "cognito-idp:DescribeUserPoolClient",
-          "cognito-idp:DescribeUserPoolDomain",
           "cognito-idp:GetUserPoolMfaConfig",
           "cognito-idp:ListTagsForResource",
           "cognito-idp:SetUserPoolMfaConfig",
@@ -584,6 +576,27 @@ resource "aws_iam_policy" "deploy_infra_edge" {
         ]
         Resource  = ["arn:aws:cognito-idp:${var.region}:${var.account_id}:userpool/*"]
         Condition = local.region_condition
+      },
+      # Lectura y descifrado del correo propietario en Parameter Store (D11) para Cognito y SNS.
+      {
+        Sid       = "ReadOwnerEmailParameter"
+        Effect    = "Allow"
+        Action    = ["ssm:GetParameter"]
+        Resource  = ["arn:aws:ssm:${var.region}:${var.account_id}:parameter${var.owner_email_parameter}"]
+        Condition = local.region_condition
+      },
+      {
+        Sid      = "DecryptOwnerEmailParameterViaSsm"
+        Effect   = "Allow"
+        Action   = ["kms:Decrypt"]
+        Resource = ["arn:aws:kms:${var.region}:${var.account_id}:key/*"]
+        Condition = {
+          StringEquals = {
+            "kms:ViaService"                      = "ssm.${var.region}.amazonaws.com"
+            "kms:EncryptionContext:PARAMETER_ARN" = "arn:aws:ssm:${var.region}:${var.account_id}:parameter${var.owner_email_parameter}"
+            "aws:RequestedRegion"                 = var.region
+          }
+        }
       },
       {
         Sid    = "ManageProjectSiteBucket"
@@ -746,6 +759,7 @@ resource "aws_iam_policy" "deploy_read" {
           "cloudfront:ListOriginAccessControls",
           "cloudfront:ListResponseHeadersPolicies",
           "cloudwatch:DescribeAlarms",
+          "cognito-idp:DescribeUserPoolDomain",
           "cognito-idp:ListUserPools",
           "ec2:DescribeAvailabilityZones",
           "ec2:DescribeNetworkAcls",

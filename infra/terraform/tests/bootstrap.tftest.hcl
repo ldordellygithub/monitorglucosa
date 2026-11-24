@@ -9,6 +9,14 @@ mock_provider "aws" {
       user_id    = "AROAEXAMPLE:test"
     }
   }
+
+  mock_data "aws_ssm_parameter" {
+    defaults = {
+      name  = "/monitorglucosa/prod/owner-email"
+      type  = "SecureString"
+      value = "owner@example.invalid"
+    }
+  }
 }
 
 run "raiz_bootstrap_inicial_sin_digests_permite_primer_despliegue" {
@@ -241,6 +249,20 @@ run "modulo_bootstrap_cumple_s3_oidc_iam_ecr_y_etiquetas" {
       ] : length(p) <= 6144
     ])
     error_message = "Cada política IAM gestionada debe mantenerse por debajo del límite AWS de 6144 caracteres."
+  }
+
+  # --- D11 / mínimo privilegio KMS: descifrado SSM acotado al parámetro exacto ---
+  assert {
+    condition = (
+      length([
+        for s in jsondecode(aws_iam_policy.deploy_infra_edge.policy).Statement : s
+        if s.Sid == "DecryptOwnerEmailParameterViaSsm" &&
+        s.Effect == "Allow" &&
+        try(s.Condition.StringEquals["kms:ViaService"], "") == "ssm.us-east-1.amazonaws.com" &&
+        try(s.Condition.StringEquals["kms:EncryptionContext:PARAMETER_ARN"], "") == "arn:aws:ssm:us-east-1:123456789012:parameter/monitorglucosa/prod/owner-email"
+      ]) == 1
+    )
+    error_message = "DecryptOwnerEmailParameterViaSsm debe exigir kms:ViaService=ssm.us-east-1.amazonaws.com y kms:EncryptionContext:PARAMETER_ARN exacto."
   }
 
   # --- Requisito 6.1: ECR inmutable, escaneo al subir, AES256, 10 imágenes y política Lambda ---

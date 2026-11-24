@@ -124,7 +124,7 @@ runbook del diseño, no son tareas de código.
   - VPC en `us-east-1` (`us-east-1a` y `us-east-1b`) sin NAT ni IGW, endpoint gateway de S3, grupos de seguridad, Aurora PostgreSQL Serverless v2 (0–2 ACU, pausa de
     300 s, TLS forzado, IAM, Data API, backups de 7 días, protección contra borrado, contraseña gestionada por RDS).
   - _Requirements: 5.1, 5.2, 5.5_
-- [ ] 17. Crear el módulo `identity`
+- [x] 17. Crear el módulo `identity`
   - User pool Essentials en `us-east-1` con MFA TOTP, sin registro propio, clientes `web` (refresh de 1 día) y `collector` (30 días,
     rotación y `retry_grace_period_seconds`), dominio de prefijo y usuario propietario con correo de Parameter Store.
   - _Requirements: 4.1, 4.2, 4.3, 4.4_

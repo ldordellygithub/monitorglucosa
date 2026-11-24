@@ -26,3 +26,12 @@ module "database" {
   private_subnet_ids       = module.network.private_subnet_ids
   aurora_security_group_id = module.network.aurora_security_group_id
 }
+
+module "identity" {
+  source = "./modules/identity"
+
+  project               = "monitorglucosa"
+  owner_email_parameter = var.owner_email_parameter
+  # En tarea 18 se conecta a module.site.site_domain (CloudFront).
+  site_domain = "placeholder.cloudfront.net"
+}

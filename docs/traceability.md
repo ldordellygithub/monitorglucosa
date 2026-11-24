@@ -8,15 +8,15 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 
 | Fase | Spec | Estado | Criterios | Con prueba | Manuales | Sin verificar | Cobertura |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | [fase-1a-infraestructura-y-auth](#fase-1a-infraestructura-y-auth) | en curso | 45 | 29 | 0 | 16 | 64 % |
+| 1 | [fase-1a-infraestructura-y-auth](#fase-1a-infraestructura-y-auth) | en curso | 45 | 33 | 0 | 12 | 73 % |
 
 | Fase | Specs | Criterios verificados |
 | --- | --- | --- |
-| 1 | 1 | 29/45 (64 %) |
+| 1 | 1 | 33/45 (73 %) |
 
 ## fase-1a-infraestructura-y-auth
 
-[Requisitos](../.kiro/specs/fase-1a-infraestructura-y-auth/requirements.md) · [Diseño](../.kiro/specs/fase-1a-infraestructura-y-auth/design.md) · [Tareas](../.kiro/specs/fase-1a-infraestructura-y-auth/tasks.md) · 29/45 criterios verificados (64 %) · en curso · tareas 24/33
+[Requisitos](../.kiro/specs/fase-1a-infraestructura-y-auth/requirements.md) · [Diseño](../.kiro/specs/fase-1a-infraestructura-y-auth/design.md) · [Tareas](../.kiro/specs/fase-1a-infraestructura-y-auth/tasks.md) · 33/45 criterios verificados (73 %) · en curso · tareas 25/33
 
 | Requisito | Criterio | Componentes | Decisiones | Tareas | Pruebas | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -34,10 +34,10 @@ Estado: ✅ prueba etiquetada y tareas hechas · 📝 verificación manual justi
 | 3 | 3.3 | `ApiGatewayClaimsAuthenticator`, `LocalJwksAuthenticator`, `current_identity`, `api.routers.me`, `config.Settings`, `main.create_app` | D9, ADR 0005 | 8 ✓, 8.2 ✓, 12 ✓ | `backend/tests/e2e/test_compose_e2e.py::test_compose_up_wait_levanta_stack_y_valida_jwt_del_emisor_local`<br>`backend/tests/unit/test_auth.py::test_local_autenticador_acepta_aud_como_lista`<br>`backend/tests/unit/test_auth.py::test_local_autenticador_acepta_token_valido`<br>`backend/tests/unit/test_auth.py::test_local_autenticador_falla_si_jwks_inaccesible`<br>`backend/tests/unit/test_auth.py::test_local_autenticador_rechaza_cabecera_ausente_o_no_bearer`<br>`backend/tests/unit/test_auth.py::test_local_autenticador_rechaza_emisor_o_cliente_ajeno`<br>`backend/tests/unit/test_auth.py::test_local_autenticador_rechaza_firma_invalida`<br>`backend/tests/unit/test_auth.py::test_local_autenticador_rechaza_token_expirado`<br>`backend/tests/unit/test_auth.py::test_local_autenticador_rechaza_token_use_no_access`<br>`backend/tests/unit/test_auth.py::test_me_en_local_devuelve_sub_con_bearer_token`<br>`backend/tests/unit/test_auth.py::test_me_en_local_responde_401_con_token_invalido`<br>`backend/tests/unit/test_auth_local_properties.py::test_token_con_un_elemento_alterado_siempre_es_rechazado` | ✅ |
 | 3 | 3.4 | `ApiGatewayClaimsAuthenticator`, `LocalJwksAuthenticator`, `current_identity`, `api.routers.me`, `config.Settings`, `main.create_app` | D9, ADR 0005 | 6 ✓, 6.1 ✓, 8 ✓ | `backend/tests/unit/test_auth.py::test_create_app_en_local_construye_local_jwks_authenticator`<br>`backend/tests/unit/test_auth.py::test_create_app_en_prod_nunca_construye_local_jwks_authenticator`<br>`backend/tests/unit/test_config.py::test_settings_prod_con_todas_las_variables_locales_las_nombra_todas`<br>`backend/tests/unit/test_config.py::test_settings_prod_con_variable_local_falla_nombrandola_sin_mostrar_el_valor`<br>`backend/tests/unit/test_config.py::test_settings_prod_con_variable_local_vacia_tambien_falla`<br>`backend/tests/unit/test_config_properties.py::test_settings_prod_con_cualquier_variable_local_falla_sin_revelar_valores` | ✅ |
 | 3 | 3.5 | `ApiGatewayClaimsAuthenticator`, `LocalJwksAuthenticator`, `current_identity`, `api.routers.me`, `config.Settings`, `main.create_app` | D9, ADR 0005 | 8 ✓ | `backend/tests/unit/test_auth.py::test_me_en_local_devuelve_sub_con_bearer_token`<br>`backend/tests/unit/test_auth.py::test_me_en_prod_devuelve_sub_con_contexto_valido` | ✅ |
-| **4** · Identidad con Amazon Cognito | 4.1 | Módulo `identity`, autorizador JWT del módulo `api` | D11, D12, ADR 0003, ADR 0011, T-7 | 17 ○ | — | ❌ |
-| 4 | 4.2 | Módulo `identity`, autorizador JWT del módulo `api` | D11, D12, ADR 0003, ADR 0011, T-7 | 17 ○, 23 ○ | — | ❌ |
-| 4 | 4.3 | Módulo `identity`, autorizador JWT del módulo `api` | D11, D12, ADR 0003, ADR 0011, T-7 | 17 ○ | — | ❌ |
-| 4 | 4.4 | Módulo `identity`, autorizador JWT del módulo `api` | D11, D12, ADR 0003, ADR 0011, T-7 | 17 ○ | — | ❌ |
+| **4** · Identidad con Amazon Cognito | 4.1 | Módulo `identity`, autorizador JWT del módulo `api` | D11, D12, ADR 0003, ADR 0011, T-7 | 17 ✓ | `infra/terraform/tests/verify_identity.sh` | ✅ |
+| 4 | 4.2 | Módulo `identity`, autorizador JWT del módulo `api` | D11, D12, ADR 0003, ADR 0011, T-7 | 17 ✓, 23 ○ | `infra/terraform/tests/verify_identity.sh` | ⚠️ |
+| 4 | 4.3 | Módulo `identity`, autorizador JWT del módulo `api` | D11, D12, ADR 0003, ADR 0011, T-7 | 17 ✓ | `infra/terraform/tests/verify_identity.sh` | ✅ |
+| 4 | 4.4 | Módulo `identity`, autorizador JWT del módulo `api` | D11, D12, ADR 0003, ADR 0011, T-7 | 17 ✓ | `infra/terraform/tests/verify_identity.sh` | ✅ |
 | 4 | 4.5 | Módulo `identity`, autorizador JWT del módulo `api` | D11, D12, ADR 0003, ADR 0011, T-7 | 18 ○, 23 ○, 24 ○ | — | ❌ |
 | **5** · Red y base de datos en AWS | 5.1 | Módulos `network` y `database` | D13, ADR 0002, ADR 0004, ADR 0011 | 16 ✓, 24 ○ | `infra/terraform/tests/verify_network_database.sh` | ⚠️ |
 | 5 | 5.2 | Módulos `network` y `database` | D13, ADR 0002, ADR 0004, ADR 0011 | 16 ✓ | `infra/terraform/tests/verify_network_database.sh` | ✅ |

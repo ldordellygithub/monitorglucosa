@@ -9,6 +9,14 @@ mock_provider "aws" {
       user_id    = "AROAEXAMPLE:test"
     }
   }
+
+  mock_data "aws_ssm_parameter" {
+    defaults = {
+      name  = "/monitorglucosa/prod/owner-email"
+      type  = "SecureString"
+      value = "owner@example.invalid"
+    }
+  }
 }
 
 run "raiz_conecta_network_y_database_sin_errores" {
