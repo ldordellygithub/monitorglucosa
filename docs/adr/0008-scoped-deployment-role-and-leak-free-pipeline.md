@@ -1,7 +1,7 @@
 # 0008. Rol de despliegue acotado con *permissions boundary* y pipeline público sin fugas
 
 - **Estado:** Aceptado (región actualizada de `sa-east-1` a `us-east-1` por [ADR 0011](0011-aws-region-us-east-1-for-cost-optimization.md))
-- **Fecha:** 2026-11-02 (actualizado el 2026-11-07)
+- **Fecha:** 2026-11-02 (actualizado el 2026-11-24)
 - **Decisiones relacionadas:** spec `fase-1a-infraestructura-y-auth` (D4, criterio 7.2, NFR-4 y NFR-5); `tech.md · Seguridad (CI)`; `git.md` (A-7, U-6, U-7); complementa ADR 0005, ADR 0007 y [ADR 0011](0011-aws-region-us-east-1-for-cost-optimization.md)
 
 ## Contexto
@@ -35,6 +35,8 @@ Datos verificados en la documentación oficial (2026-11-02):
 1. `ecr:GetAuthorizationToken`.
 2. Las seis acciones de EC2 de los roles de las Lambdas `api` y `migrator` (no del rol de despliegue), listadas arriba, y el `Deny` de esas mismas acciones al código de la función con la condición `lambda:SourceFunctionArn`, que también exige `Resource: "*"`.
 3. Las acciones de solo lectura `Describe*` y `List*` que Terraform necesita para refrescar el estado, enumeradas una por una en el código, nunca con comodín. Incluye las comprobaciones de red que Lambda hace con el rol de quien despliega (`ec2:DescribeSecurityGroups`, `ec2:DescribeSubnets`, `ec2:DescribeVpcs` y `ec2:GetSecurityGroupsForVpc`).
+4. Las 7 acciones de CloudWatch Vended Logs exigidas por AWS al activar `access_log_settings` en HTTP API v2 (`logs:CreateLogDelivery`, `GetLogDelivery`, `UpdateLogDelivery`, `DeleteLogDelivery`, `ListLogDeliveries`, `PutResourcePolicy`, `DescribeResourcePolicies`), acotadas por `aws:RequestedRegion = us-east-1`, porque AWS IAM no admite ARN por recurso en ellas.
+5. Las acciones de control plane de CloudFront sin soporte de acotación por ARN en AWS (`cloudfront:CreateDistribution`, `CreateDistributionWithTags` y CRUD de Origin Access Control y Response Headers Policy), acotadas por `aws:RequestedRegion = us-east-1`, manteniendo `Get/Update/DeleteDistribution` y `Tag/Untag/ListTagsForResource` sobre `distribution/*`.
 
 **Pipeline público sin fugas (NFR-5):**
 

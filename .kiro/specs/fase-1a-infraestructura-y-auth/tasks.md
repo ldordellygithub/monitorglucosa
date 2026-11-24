@@ -149,7 +149,7 @@ runbook del diseño, no son tareas de código.
   - Jobs `build` (sin AWS) y `deploy` (`environment: prod`, `concurrency`, OIDC) que ejecuta `scripts/deploy.py`. Depende
     de que `G-2` (revisor del entorno `prod`) esté resuelta en el kit.
   - _Requirements: 7.2, 7.3, 7.4, 7.5_
-- [ ] 23. Documentar el runbook, los comandos reales y las verificaciones manuales
+- [x] 23. Documentar el runbook, los comandos reales y las verificaciones manuales
   - `docs/guia-de-desarrollo.md` (primer despliegue en `us-east-1`, avisos de Budgets al 80 % = US$16 y 100 % = US$20 con techo puntual de alerta de US$30/mes, Swagger UI en local), `tech.md · Comandos habituales`, NFR de
     latencia (≤ 60 s sumando reintentos) y flujo de despliegue con migraciones (con aprobación del propietario y
     `kspec steering-sync`), y `manual-checks.md` con los criterios no automatizables, incluidas las verificaciones

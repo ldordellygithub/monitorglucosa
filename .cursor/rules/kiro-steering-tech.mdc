@@ -55,28 +55,43 @@ Calibra la arquitectura. Ninguna sección siguiente debe pedir más complejidad 
 
 ## Comandos habituales
 
-Comandos reales verificados hoy en `backend/pyproject.toml`, `.pre-commit-config.yaml` y `.cursor/kiro/bin/kspec` (los de `collector/`, `frontend/` e `infra/terraform/` se activan a medida que se creen sus carpetas en las tareas siguientes de `fase-1a` y `fase-1b`):
+Comandos reales verificados en `backend/`, `dev/jwt-issuer/`, `scripts/`, `compose.yaml`, `infra/terraform/`, `.github/workflows/` y `kspec` (los de `collector/` y `frontend/` se añaden con sus specs en `fase-1b` y `fase-2`):
 
 ```bash
-# Backend (ejecutar desde backend/)
-uv sync --locked
-uv run ruff check .
-uv run ruff format --check .
-uv run mypy src tests
-uv run lint-imports
-uv run pytest
+# Backend (desde la raíz del repositorio)
+uv --directory backend sync --locked
+uv --directory backend run ruff check .
+uv --directory backend run ruff format --check .
+uv --directory backend run mypy
+uv --directory backend run lint-imports
+uv --directory backend run pytest -m "not e2e" --cov --cov-fail-under=80
+uv --directory backend run python tools/export_openapi.py --check
+uv --directory backend run openapi-spec-validator openapi.json
 
-# Hooks de pre-commit y calidad de specs / arquitectura (desde la raíz)
-pre-commit run --all-files
-python3 ~/.cursor/kiro/bin/kspec status
-python3 ~/.cursor/kiro/bin/kspec steering check
-python3 ~/.cursor/kiro/bin/kspec lint
-python3 ~/.cursor/kiro/bin/kspec diagrams check
+# Emisor JWT local y scripts de despliegue
+uv --directory dev/jwt-issuer run ruff check . && uv --directory dev/jwt-issuer run mypy && uv --directory dev/jwt-issuer run pytest
+uv --directory scripts run ruff check . && uv --directory scripts run mypy && uv --directory scripts run pytest
 
-# Entorno local e infraestructura (provisionales hasta completar las tareas 11–22 de fase-1a)
-docker compose up --build
+# Entorno local Docker Compose, imagen única y E2E
+cp .env.example .env
+docker build --platform linux/amd64 --provenance=false --sbom=false -t monitorglucosa-api:local backend
+docker compose up -d --build --wait
+uv --directory backend run pytest -m e2e
+docker compose down -v --remove-orphans
+
+# Infraestructura Terraform (offline con mocks) y Checkov
 terraform -chdir=infra/terraform fmt -check -recursive
+terraform -chdir=infra/terraform init -backend=false -input=false
 terraform -chdir=infra/terraform validate
+terraform -chdir=infra/terraform test
+docker run --rm -v "$PWD:/workspace:ro" bridgecrew/checkov:3.2.517@sha256:34c97d3e49a6003bbf11ab5353ebcf609cdba95b94d09f61983bdf683035a967 -d /workspace/infra/terraform --framework terraform --compact --quiet
+
+# Workflows, secretos, SAST, pre-commit y Kiro
+actionlint .github/workflows/*.yml
+gitleaks detect --source . --no-banner --redact
+semgrep scan --config p/owasp-top-ten --config p/python --error --metrics=off --exclude scripts/tests backend/src backend/tools dev/jwt-issuer/src scripts
+pre-commit run --all-files
+kspec status && kspec steering check && kspec lint && kspec trace check && kspec diagrams check
 ```
 
 ## Arquitectura
@@ -184,10 +199,10 @@ Usa el mismo caso de uso de registro con origen `manual`. Las lecturas manuales 
 
 Cubre lo que Docker no verifica, sin entorno de staging ([ADR 0005](../../docs/adr/0005-containerized-local-environment.md), [ADR 0006](../../docs/adr/0006-database-migrations-with-an-in-vpc-migrator-lambda.md), [ADR 0007](../../docs/adr/0007-idempotent-sql-bootstrap-through-rds-data-api.md), [ADR 0009](../../docs/adr/0009-aurora-resume-as-a-retryable-503-within-30-seconds.md), `OPS 6`, `OPS06-BP01`, `OPS06-BP04`):
 
-1. GitHub Actions construye la imagen única de la API, la prueba con Docker Compose (linters, tipos, tests unitarios, de integración, de arquitectura y de propiedades) y la sube a ECR identificada por su digest.
-2. Tras aprobación manual en el entorno `prod` de GitHub (fuera de la ventana crítica diaria de `20:00 a 23:00` COT), Terraform despliega ese digest en `us-east-1`, ejecuta el bootstrap SQL idempotente por RDS Data API y la Lambda `migrator` dentro de la VPC.
-3. Prueba de humo (`scripts/smoke_test.py`), sin escribir datos: `/health/ready`, firmado con SigV4 por el rol OIDC del pipeline, responde 200 (reintentando los 503 de reanudación de Aurora hasta 120 s). Eso confirma API Gateway, Lambda, la VPC sin NAT, la autenticación IAM y la reanudación de Aurora. Además, un endpoint protegido sin token responde 401, lo que confirma que el autorizador JWT está activo.
-4. Si la prueba falla, el despliegue se marca como fallido y se vuelve a desplegar automáticamente el digest anterior.
+1. GitHub Actions (`deploy.yml`, job `build` sin acceso a AWS) construye la imagen única `linux/amd64` (`--provenance=false --sbom=false`), la prueba con Docker Compose (`--no-build`) y `pytest -m e2e`, y guarda el artefacto con su `SHA-256`.
+2. Tras aprobación manual en el entorno `prod` de GitHub (fuera de la ventana crítica diaria de `20:00 a 23:00` COT), el job `deploy` (OIDC, `concurrency: deploy-prod`) verifica el `SHA-256`, sube la imagen por digest inmutable a ECR y ejecuta `scripts/deploy.py` en dos fases: **Fase 1** (`migrator = D_new`, manteniendo la API en `D_prev`) → `scripts/db_bootstrap.py` (bootstrap SQL idempotente por RDS Data API) → espera `function-active-v2` e invocación síncrona de la Lambda `migrator` dentro de la VPC → **Fase 2** (solo si la migración devuelve `status = ok`, promueve la API a `D_new`).
+3. Prueba de humo (`scripts/smoke_test.py`), sin escribir datos: `/health/ready`, firmado con SigV4 por el rol OIDC del pipeline, responde 200 (timeout de 40 s por petición, reintentando los 503 de reanudación de Aurora hasta 120 s respetando `Retry-After`). Eso confirma API Gateway, Lambda, la VPC sin NAT, la autenticación IAM y la reanudación de Aurora. Además, `GET /api/v1/me` sin token responde 401, confirmando el autorizador JWT activo.
+4. Si una migración falla, la API permanece intacta en `D_prev`; si la prueba de humo falla tras promover la API, `deploy.py` revierte automáticamente a `D_prev` y marca el despliegue como fallido.
 
 ### App móvil (fase 5) *(Propuesto; tecnología decidida en `T-8`)*
 
@@ -220,7 +235,7 @@ Detalle por entidad en la [vista de ciclo de vida](../../docs/architecture/svg/0
 | Atributo | Objetivo *(Decidido)* | Cómo se verifica |
 | --- | --- | --- |
 | Fiabilidad de sincronización | Ninguna lectura válida se pierde ni se duplica entre sesiones BLE ni al fusionar el respaldo local de 451 registros (`RPO operativo = 0`) | Prueba de integración y de propiedades con reintentos simulados e importación dual |
-| Latencia de la API (`PERF 1`, `PERF01-BP03`) | `p95 < 500 ms` en el endpoint de historial con Aurora activa. Con Aurora en pausa (`MinCapacity = 0`), `connect_timeout = 20 s` y respuesta **503 `DATABASE_UNAVAILABLE`** con `Retry-After: 5`; los clientes reintentan hasta **60 s** mostrando «despertando la base de datos» (`smoke_test.py` hasta 120 s; [ADR 0009](../../docs/adr/0009-aurora-resume-as-a-retryable-503-within-30-seconds.md)) | Medición en el entorno `prod` y pruebas de integración con sondeador de base de datos |
+| Latencia de la API (`PERF 1`, `PERF01-BP03`) | `p95 < 500 ms` en `/health` y `/api/v1/me` (y futuros endpoints con Aurora activa). Con Aurora en pausa (`MinCapacity = 0`), `connect_timeout = 20 s` y respuesta **503 `DATABASE_UNAVAILABLE`** con `Retry-After: 5`; los clientes resuelven la reanudación en **≤ 60 s sumando reintentos** (cada petición individual termina **< 30 s** por el límite de HTTP API), mostrando «despertando la base de datos» (`smoke_test.py` hasta 120 s; [ADR 0009](../../docs/adr/0009-aurora-resume-as-a-retryable-503-within-30-seconds.md)) | Medición en el entorno `prod` (`manual-checks.md`) y pruebas de integración con sondeador de base de datos |
 | Usabilidad operativa | **< 3 clics y < 30 segundos** para cada acción habitual en la web (registrar una dosis de insulina, crear una anotación o consultar el historial) | Revisión de flujo en pruebas E2E (Playwright) y validación manual del titular |
 | Disponibilidad | Servicio personal sin SLA 24/7 (`R-2`); se evitan despliegues o mantenimientos disruptivos en la ventana crítica diaria de **20:00 a 23:00** (hora de Colombia) y en las 48 h previas a consultas médicas | Regla operativa en `docs/runbooks/` y aprobación manual del despliegue en GitHub |
 | Tamaño de entrada | Máximo 500 lecturas por lote (`MAX_BATCH_SIZE`); un lote mayor recibe 422 `READING_BATCH_TOO_LARGE` | Prueba unitaria de validación en el borde |
