@@ -14,35 +14,49 @@ router = APIRouter(tags=["salud"])
 class HealthResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    status: Literal["ok"] = "ok"
+    status: Literal["ok"]
 
 
 class ReadinessResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    status: Literal["ready"] = "ready"
+    status: Literal["ready"]
 
 
-@router.get("/health", response_model=HealthResponse)
+@router.get(
+    "/health",
+    operation_id="getHealth",
+    summary="Comprobar que la API está viva",
+    response_model=HealthResponse,
+    openapi_extra={
+        "x-requirements": ["2.1", "6.2"],
+        "security": [],
+    },
+)
 async def get_health() -> HealthResponse:
-    """Comprueba que la API está viva.
-
-    Responde sin abrir ninguna conexión a la base de datos, así que nunca
+    """Responde sin abrir ninguna conexión a la base de datos, así que nunca
     despierta Aurora. Lambda Web Adapter la usa como comprobación de arranque.
     Pública.
     """
     return HealthResponse(status="ok")
 
 
-@router.get("/health/ready", response_model=ReadinessResponse)
+@router.get(
+    "/health/ready",
+    operation_id="getReadiness",
+    summary="Comprobar que la API llega a la base de datos",
+    response_model=ReadinessResponse,
+    openapi_extra={
+        "x-requirements": ["2.2", "6.2", "7.5", "NFR-2"],
+        "security": [{"awsSigV4": []}],
+    },
+)
 async def get_readiness(
     readiness: Annotated[CheckReadiness, Depends(get_check_readiness)],
 ) -> ReadinessResponse:
-    """Comprueba que la API llega a la base de datos.
-
-    Ejecuta SELECT 1 con una conexión propia que se cierra al terminar.
-    Si Aurora está en pausa, la petición la despierta.
-    En caso de timeout o indisponibilidad, se responde 503 DATABASE_UNAVAILABLE.
+    """Ejecuta `SELECT 1` con una conexión propia que se cierra al terminar.
+    Si Aurora está en pausa, la petición la despierta. Exige SigV4 en producción;
+    en local no hay autorización.
     """
     await readiness.execute()
     return ReadinessResponse(status="ready")

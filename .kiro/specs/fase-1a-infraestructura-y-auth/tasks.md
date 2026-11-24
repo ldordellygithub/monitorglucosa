@@ -88,7 +88,7 @@ runbook del diseño, no son tareas de código.
   - [x] 10.1 Prueba basada en propiedades: el bootstrap SQL es idempotente (n ejecuciones como no superusuario)
     - _Property: 7_
     - _Requirements: 5.3_
-- [ ] 11. Construir y publicar el contrato OpenAPI y la referencia de la API
+- [x] 11. Construir y publicar el contrato OpenAPI y la referencia de la API
   - `api.openapi.build_openapi()`, `backend/tools/export_openapi.py [--check]`, `backend/openapi.json`,
     `docs/api/README.md`, desactivar `/docs`, `/redoc` y `/openapi.json` en `prod`, y las pruebas de contrato: validez
     OpenAPI 3.1, conformidad con los `openapi.yaml` de las specs y Schemathesis.

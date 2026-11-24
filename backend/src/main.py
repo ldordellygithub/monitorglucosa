@@ -4,6 +4,7 @@ import logging
 import os
 import time
 from collections.abc import Awaitable, Callable
+from functools import partial
 from typing import Literal
 
 from fastapi import FastAPI
@@ -12,6 +13,7 @@ from pydantic import BaseModel, ConfigDict
 
 from src.api.errors import register_error_handlers, safe_traceback
 from src.api.middleware import RequestLogMiddleware
+from src.api.openapi import build_openapi
 from src.api.routers.health import router as health_router
 from src.api.routers.me import router as me_router
 from src.application.ports import Authenticator, DatabaseProbe
@@ -136,6 +138,7 @@ def create_app(
     app.add_middleware(RequestLogMiddleware)
     app.include_router(health_router)
     app.include_router(me_router)
+    app.openapi = partial(build_openapi, app)  # type: ignore[method-assign]
 
     return app
 

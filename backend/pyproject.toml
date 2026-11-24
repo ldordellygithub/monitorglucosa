@@ -23,6 +23,10 @@ dev = [
     "import-linter",
     "hypothesis",
     "httpx2",
+    "openapi-spec-validator>=0.9.0",
+    "schemathesis>=4.32.0",
+    "pyyaml>=6.0.3",
+    "types-pyyaml>=6.0.12.20260906",
 ]
 
 [tool.uv]
@@ -62,7 +66,7 @@ select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "S", "ASYNC", "RUF"]
 [tool.mypy]
 strict = true
 python_version = "3.13"
-files = ["src", "tests"]
+files = ["src", "tests", "tools"]
 mypy_path = "."
 explicit_package_bases = true
 plugins = ["pydantic.mypy"]
