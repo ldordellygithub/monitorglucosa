@@ -160,7 +160,7 @@ runbook del diseño, no son tareas de código.
   - Modelo `docs/architecture/diagrams.py` según «Architecture Views» (vistas 02, 03, 04, 08, 09, 10 y la nueva 13),
     `kspec diagrams export` y `kspec diagrams check` en verde.
   - _Requirements: 4.5, 5.1, 6.2, 7.5, 8.4_
-- [ ] 25. Checkpoint final: todas las pruebas, `kspec lint`, `kspec trace check` y `kspec diagrams check` en verde
+- [x] 25. Checkpoint final: todas las pruebas, `kspec lint`, `kspec trace check` y `kspec diagrams check` en verde
   - Todos los criterios con prueba etiquetada o verificación manual.
 
 ## Execution Order

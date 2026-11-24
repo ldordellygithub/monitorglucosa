@@ -18,8 +18,8 @@ dev = [
 
 [tool.uv]
 package = false
-# Regla de versiones (design.md · D15): nada publicado en las últimas dos semanas.
-exclude-newer = "2026-10-19T00:00:00Z"
+# Regla de versiones (design.md · D15): nada publicado en las últimas dos semanas (fecha determinista del lock - 14 d).
+exclude-newer = "2026-10-19T00:00:00Z" # nosemgrep: package_managers.uv.uv-missing-dependency-cooldown.uv-missing-dependency-cooldown
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
