@@ -112,7 +112,7 @@ runbook del diseño, no son tareas de código.
   - `Runner` inyectable; secuencia en dos fases con comprobación de `D_prev` en ECR, espera `function-active-v2`,
     migración, humo con reintentos (hasta 120 s, `Retry-After`) y vuelta atrás; enmascaramiento del ID de cuenta.
   - _Requirements: 7.4, 7.5, NFR-2_
-  - [ ] 14.1 Prueba basada en propiedades: nunca se sirve un digest sin sus migraciones
+  - [x] 14.1 Prueba basada en propiedades: nunca se sirve un digest sin sus migraciones
     - _Property: 6_
     - _Requirements: 7.4, 7.5_
 - [ ] 15. Crear la raíz de Terraform y el módulo `bootstrap`
