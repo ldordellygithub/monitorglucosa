@@ -133,7 +133,7 @@ runbook del diseño, no son tareas de código.
     `/health/ready`, throttling 10/20, CORS, logs de acceso, permisos con `source_arn`, y S3 + CloudFront con OAC, HSTS
     y CSP.
   - _Requirements: 4.5, 6.1, 6.2, 6.3, 6.4, 6.5_
-- [ ] 19. Crear el módulo `operations`
+- [x] 19. Crear el módulo `operations`
   - Tema SNS, las cuatro alarmas, presupuesto de US$20 con avisos al 80 % (US$16) y al 100 % (US$20) y retención de 30 días en los grupos de logs.
   - _Requirements: 8.3, 8.4, 8.5, NFR-3_
 - [ ] 20. Checkpoint: `terraform fmt -check`, `validate`, `terraform test` y checkov en verde

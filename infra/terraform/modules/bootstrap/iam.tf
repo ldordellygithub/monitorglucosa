@@ -685,8 +685,7 @@ resource "aws_iam_policy" "deploy_infra_edge" {
         Sid    = "ManageProjectAlarmsSnsAndBudgets"
         Effect = "Allow"
         Action = [
-          "budgets:CreateBudget",
-          "budgets:DeleteBudget",
+          "budgets:ListTagsForResource",
           "budgets:ModifyBudget",
           "budgets:TagResource",
           "budgets:UntagResource",
@@ -700,6 +699,7 @@ resource "aws_iam_policy" "deploy_infra_edge" {
           "sns:DeleteTopic",
           "sns:GetSubscriptionAttributes",
           "sns:GetTopicAttributes",
+          "sns:ListSubscriptionsByTopic",
           "sns:ListTagsForResource",
           "sns:SetTopicAttributes",
           "sns:Subscribe",

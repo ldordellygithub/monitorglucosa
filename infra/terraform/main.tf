@@ -63,6 +63,18 @@ module "api" {
   cognito_web_client_id       = module.identity.web_client_id
   cognito_collector_client_id = module.identity.collector_client_id
   site_domain                 = module.site.site_domain
-  # En tarea 19 se conecta a module.operations.apigateway_log_group_arn.
-  access_log_group_arn = "arn:aws:logs:us-east-1:${data.aws_caller_identity.current.account_id}:log-group:/aws/apigateway/monitorglucosa"
+  access_log_group_arn        = module.operations.apigateway_log_group_arn
+}
+
+module "operations" {
+  source = "./modules/operations"
+
+  account_id                = data.aws_caller_identity.current.account_id
+  region                    = "us-east-1"
+  project                   = "monitorglucosa"
+  owner_email_parameter     = var.owner_email_parameter
+  api_function_name         = module.api.api_function_name
+  migrator_function_name    = module.api.migrator_function_name
+  http_api_id               = module.api.http_api_id
+  aurora_writer_instance_id = module.database.writer_instance_id
 }
