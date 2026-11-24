@@ -93,7 +93,7 @@ runbook del diseño, no son tareas de código.
     `docs/api/README.md`, desactivar `/docs`, `/redoc` y `/openapi.json` en `prod`, y las pruebas de contrato: validez
     OpenAPI 3.1, conformidad con los `openapi.yaml` de las specs y Schemathesis.
   - _Requirements: 2.3, 7.1, NFR-6_
-  - [ ] 11.1 Prueba basada en propiedades: la API cumple su contrato (Schemathesis y comparador)
+  - [x] 11.1 Prueba basada en propiedades: la API cumple su contrato (Schemathesis y comparador)
     - _Property: 8_
     - _Requirements: 2.3, NFR-6_
 - [ ] 12. Crear la imagen, `compose.yaml`, el emisor JWT de pruebas y el arranque local
