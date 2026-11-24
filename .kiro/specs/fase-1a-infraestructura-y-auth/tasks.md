@@ -140,7 +140,7 @@ runbook del diseño, no son tareas de código.
 
 ## Pipeline y documentación
 
-- [ ] 21. Crear `ci.yml` y añadir el check `ci` al ruleset
+- [x] 21. Crear `ci.yml` y añadir el check `ci` al ruleset
   - Jobs `changes`, `backend` (con `pytest --cov`), `compose`, `infra` y el resumen `ci`; acciones fijadas por SHA; semgrep, gitleaks,
     dependency review, comparación de `openapi.json` y checkov; editar `.github/rulesets/main.json` (se aplica con
     `kspec github apply`, con confirmación del propietario).
