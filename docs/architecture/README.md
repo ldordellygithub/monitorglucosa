@@ -14,6 +14,7 @@
 | 8 · Flujo de datos, límites de confianza y STRIDE | ¿Por dónde viajan los datos de salud y cómo se protegen en cada límite? | [08-flujo-de-datos.svg](svg/08-flujo-de-datos.svg) |
 | 9 · Ciclo de vida de los datos de salud | ¿Dónde vive cada dato, cuánto se conserva y cómo se borra? | [09-ciclo-de-vida-datos.svg](svg/09-ciclo-de-vida-datos.svg) |
 | 10 · CI/CD · de un cambio a producción | ¿Cómo llega un cambio a producción? | [10-ci-cd.svg](svg/10-ci-cd.svg) |
+| 11 · Observabilidad y respuesta a incidentes | ¿Cómo se detecta un fallo y qué se hace después? | [11-observabilidad.svg](svg/11-observabilidad.svg) |
 
 ## Decisiones de arquitectura (ADR)
 

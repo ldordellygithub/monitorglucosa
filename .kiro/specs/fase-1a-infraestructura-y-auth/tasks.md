@@ -156,7 +156,7 @@ runbook del diseño, no son tareas de código.
     del primer despliegue de los ADR 0007 (Data API), 0008 (log público) y 0011 (región `us-east-1` y factura del primer mes), y que el `requestId` real de API Gateway
     cumple `[A-Za-z0-9._=-]{1,128}` (si no, el `request_id` caería a un UUID y se perdería la correlación).
   - _Requirements: 4.2, 4.5, 5.3, 5.4, 6.3, 7.3, 8.3, 8.4, NFR-2, NFR-3, NFR-5, NFR-6_
-- [ ] 24. Actualizar las vistas de arquitectura
+- [x] 24. Actualizar las vistas de arquitectura
   - Modelo `docs/architecture/diagrams.py` según «Architecture Views» (vistas 02, 03, 04, 08, 09, 10 y la nueva 13),
     `kspec diagrams export` y `kspec diagrams check` en verde.
   - _Requirements: 4.5, 5.1, 6.2, 7.5, 8.4_
